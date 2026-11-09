@@ -1,0 +1,425 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// GesContest – modelos do banco (PostgreSQL) a partir do DER v2
+// ============================================================================
+
+// ----------------------------- ENUMS ----------------------------------------
+enum TipoUsuario {
+  PROF
+  ATLETA
+  STAFF
+  TECNICO
+  ADM
+}
+
+enum FichaStatus {
+  PENDENTE
+  APROVADA
+  RECUSADA
+}
+
+enum Naipe {
+  MASCULINO
+  FEMININO
+  MISTO
+}
+
+enum TipoModalidade {
+  INDIVIDUAL
+  COLETIVA
+}
+
+enum FormatoPlacar {
+  CORRIDO
+  SETS
+}
+
+enum StatusDisputa {
+  AGENDADA
+  EM_ANDAMENTO
+  ENCERRADA
+  WO
+}
+
+enum StatusOcorrencia {
+  ABERTA
+  EM_ANALISE
+  RESOLVIDA
+}
+
+enum StatusBoletim {
+  RASCUNHO
+  PUBLICADO
+}
+
+enum TipoBoletim {
+  PARCIAL
+  FINAL
+}
+
+// ----------------------------- USUÁRIO E DELEGAÇÃO --------------------------
+model Usuario {
+  id                Int          @id @default(autoincrement())
+  tipo              TipoUsuario
+  nome              String
+  email             String       @unique
+  celular           String?
+  senhaHash         String       @map("senha_hash")
+  ultimoAcesso      DateTime?    @map("ultimo_acesso")
+  cpf               String?      @unique // só ATLETA e STAFF
+  matricula         String?      @unique // só ATLETA
+  dataNascimento    DateTime?    @map("data_nascimento") @db.Date // só ATLETA
+  fichaStatus       FichaStatus? @map("ficha_status") // só ATLETA
+  fichaArquivo      String?      @map("ficha_arquivo") // só ATLETA
+  fichaMotivoRecusa String?      @map("ficha_motivo_recusa") // NOVO: motivo da recusa (tela C6a)
+  delegacaoId       Int?         @map("delegacao_id") // só TECNICO e ATLETA
+  delegacao         Delegacao?   @relation("DelegacaoMembros", fields: [delegacaoId], references: [id])
+
+  delegacoesCadastradas Delegacao[]           @relation("DelegacaoProf")
+  notificacoes          Notificacao[]
+  boletinsGerados       Boletim[]             @relation("BoletimAutor")
+  boletinsPublicados    Boletim[]             @relation("BoletimPublicador")
+  boletinsVistos        BoletimVisualizacao[]
+  ocorrencias           Ocorrencia[]
+  equipesCriadas        Equipe[]              @relation("EquipeProf")
+  equipesComoTecnico    Equipe[]              @relation("EquipeTecnico")
+  equipesComoAtleta     EquipeAtleta[]
+  inscricoesProva       InscricaoProva[]
+  resultados            Resultado[]
+
+  @@map("usuario")
+}
+
+model Delegacao {
+  id      Int       @id @default(autoincrement())
+  nome    String
+  profId  Int       @map("prof_id") // Prof/Coordenador que cadastrou
+  prof    Usuario   @relation("DelegacaoProf", fields: [profId], references: [id])
+  membros Usuario[] @relation("DelegacaoMembros")
+
+  auxiliares Auxiliar[]
+  equipes    Equipe[]
+
+  @@map("delegacao")
+}
+
+model Auxiliar {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  celular     String?
+  delegacaoId Int       @map("delegacao_id")
+  delegacao   Delegacao @relation(fields: [delegacaoId], references: [id])
+
+  equipes EquipeAuxiliar[]
+
+  @@map("auxiliar")
+}
+
+model Notificacao {
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int      @map("usuario_id")
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensagem     String
+  dataHora     DateTime @default(now()) @map("data_hora")
+  statusLida   Boolean  @default(false) @map("status_lida")
+  emailEnviado Boolean  @default(false) @map("email_enviado")
+
+  @@map("notificacao")
+}
+
+// ----------------------------- EVENTO, MODALIDADE, TORNEIO ------------------
+model Evento {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  idadeLimite Int?     @map("idade_limite") // conta só pelo ano de nascimento
+  maxModTotal Int?     @map("max_mod_total") // vazio = sem limite
+  maxModInd   Int?     @map("max_mod_ind")
+  maxModCol   Int?     @map("max_mod_col")
+  dataInicio  DateTime @map("data_inicio")
+  dataFim     DateTime @map("data_fim")
+
+  locais      Local[]
+  modalidades Modalidade[]
+  boletins    Boletim[]
+
+  @@map("evento")
+}
+
+model Local {
+  id       Int       @id @default(autoincrement())
+  nome     String
+  eventoId Int       @map("evento_id")
+  evento   Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  disputas Disputa[]
+
+  @@map("local")
+}
+
+model Modalidade {
+  id            Int            @id @default(autoincrement())
+  eventoId      Int            @map("evento_id")
+  evento        Evento         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome          String
+  minAtletas    Int            @default(1) @map("min_atletas")
+  maxAtletas    Int            @default(1) @map("max_atletas")
+  tipo          TipoModalidade
+  formatoPlacar FormatoPlacar? @map("formato_placar") // só modalidades com placar
+
+  torneios Torneio[]
+  equipes  Equipe[]
+
+  @@map("modalidade")
+}
+
+model CriterioDesempate {
+  id        Int     @id @default(autoincrement())
+  codigo    String  @unique // ex.: SALDO_SETS, CONFRONTO_DIRETO
+  nome      String
+  descricao String?
+  formato   String // SET | NOR | AMBOS
+
+  torneios TorneioCriterio[]
+
+  @@map("criterio_desempate")
+}
+
+model Torneio {
+  id                  Int        @id @default(autoincrement())
+  nome                String // NOVO: aparece na tela C3 ("Nome do torneio")
+  modalidadeId        Int        @map("modalidade_id")
+  modalidade          Modalidade @relation(fields: [modalidadeId], references: [id])
+  sistemaDisputa      String     @map("sistema_disputa") // ex.: grupos, mata-mata, pontos corridos
+  chaves              Int?
+  pontosVit           Int        @default(3) @map("pontos_vit")
+  pontosEmp           Int        @default(1) @map("pontos_emp")
+  pontosDer           Int        @default(0) @map("pontos_der")
+  setsParaVencer      Int?       @map("sets_para_vencer") // só modalidades por sets
+  pontosPorSet        Int?       @map("pontos_por_set")
+  pontosSetDecisivo   Int?       @map("pontos_set_decisivo")
+  diferencaMinima     Int?       @map("diferenca_minima")
+  woPlacarVencedor    Int?       @map("wo_placar_vencedor")
+  woPlacarPerdedor    Int?       @map("wo_placar_perdedor")
+  woPontosSetVencedor Int?       @map("wo_pontos_set_vencedor")
+
+  criterios TorneioCriterio[]
+  disputas  Disputa[]
+
+  @@map("torneio")
+}
+
+model TorneioCriterio {
+  torneioId  Int               @map("torneio_id")
+  criterioId Int               @map("criterio_id")
+  ordem      Int
+  torneio    Torneio           @relation(fields: [torneioId], references: [id], onDelete: Cascade)
+  criterio   CriterioDesempate @relation(fields: [criterioId], references: [id])
+
+  @@id([torneioId, criterioId])
+  @@unique([torneioId, ordem]) // a ordem não se repete dentro do mesmo torneio
+  @@map("torneio_criterio")
+}
+
+// ----------------------------- DISPUTAS (PARTIDA / PROVA) -------------------
+model Disputa {
+  id         Int           @id @default(autoincrement())
+  torneioId  Int           @map("torneio_id")
+  torneio    Torneio       @relation(fields: [torneioId], references: [id])
+  localId    Int?          @map("local_id")
+  local      Local?        @relation(fields: [localId], references: [id])
+  dataHora   DateTime      @map("data_hora")
+  duracaoMin Int?          @map("duracao_min")
+  fase       String?
+  status     StatusDisputa @default(AGENDADA)
+
+  partida     Partida?
+  prova       Prova?
+  ocorrencias Ocorrencia[]
+
+  @@map("disputa")
+}
+
+model Partida {
+  disputaId  Int     @id @map("disputa_id")
+  disputa    Disputa @relation(fields: [disputaId], references: [id], onDelete: Cascade)
+  equipeAId  Int     @map("equipe_a_id")
+  equipeA    Equipe  @relation("PartidaEquipeA", fields: [equipeAId], references: [id])
+  equipeBId  Int     @map("equipe_b_id")
+  equipeB    Equipe  @relation("PartidaEquipeB", fields: [equipeBId], references: [id])
+  placarA    Int     @default(0) @map("placar_a")
+  placarB    Int     @default(0) @map("placar_b")
+  cartaoAmaA Int     @default(0) @map("cartao_ama_a")
+  cartaoAmaB Int     @default(0) @map("cartao_ama_b")
+  cartaoVerA Int     @default(0) @map("cartao_ver_a")
+  cartaoVerB Int     @default(0) @map("cartao_ver_b")
+  woEquipeId Int?    @map("wo_equipe_id") // equipe que deu WO
+  woEquipe   Equipe? @relation("PartidaWo", fields: [woEquipeId], references: [id])
+
+  sets SetPartida[]
+
+  @@map("partida")
+}
+
+model SetPartida {
+  partidaId Int     @map("partida_id")
+  numero    Int
+  pontosA   Int     @default(0) @map("pontos_a")
+  pontosB   Int     @default(0) @map("pontos_b")
+  partida   Partida @relation(fields: [partidaId], references: [disputaId], onDelete: Cascade)
+
+  @@id([partidaId, numero])
+  @@map("set_partida")
+}
+
+model Prova {
+  disputaId Int     @id @map("disputa_id")
+  disputa   Disputa @relation(fields: [disputaId], references: [id], onDelete: Cascade)
+  bateria   Int?
+
+  resultados Resultado[]
+  inscricoes InscricaoProva[]
+
+  @@map("prova")
+}
+
+// NOVO (faltava no DER): quem está inscrito em qual prova. Necessário para
+// contar o limite de modalidades por atleta (RN104). Revezamento conta como individual.
+model InscricaoProva {
+  atletaId Int     @map("atleta_id")
+  provaId  Int     @map("prova_id")
+  atleta   Usuario @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+  prova    Prova   @relation(fields: [provaId], references: [disputaId], onDelete: Cascade)
+
+  @@id([atletaId, provaId])
+  @@map("inscricao_prova")
+}
+
+// Resultado de prova: OU atleta OU equipe (regra XOR – ver o SQL de CHECK no fim do arquivo)
+model Resultado {
+  id        Int      @id @default(autoincrement())
+  provaId   Int      @map("prova_id")
+  prova     Prova    @relation(fields: [provaId], references: [disputaId], onDelete: Cascade)
+  atletaId  Int?     @map("atleta_id")
+  atleta    Usuario? @relation(fields: [atletaId], references: [id])
+  equipeId  Int?     @map("equipe_id")
+  equipe    Equipe?  @relation(fields: [equipeId], references: [id])
+  unidade   String? // ex.: s, m
+  colocacao Int?
+  marca     Float?
+
+  @@map("resultado")
+}
+
+// ----------------------------- EQUIPES --------------------------------------
+model Equipe {
+  id           Int        @id @default(autoincrement())
+  delegacaoId  Int        @map("delegacao_id")
+  delegacao    Delegacao  @relation(fields: [delegacaoId], references: [id])
+  nome         String
+  naipe        Naipe
+  modalidadeId Int        @map("modalidade_id")
+  modalidade   Modalidade @relation(fields: [modalidadeId], references: [id])
+  profId       Int        @map("prof_id") // Prof/Coordenador que criou
+  prof         Usuario    @relation("EquipeProf", fields: [profId], references: [id])
+  tecnicoId    Int?       @map("tecnico_id") // responsável; vincula-se depois da criação
+  tecnico      Usuario?   @relation("EquipeTecnico", fields: [tecnicoId], references: [id])
+
+  atletas    EquipeAtleta[]
+  auxiliares EquipeAuxiliar[]
+  partidasA  Partida[]        @relation("PartidaEquipeA")
+  partidasB  Partida[]        @relation("PartidaEquipeB")
+  partidasWo Partida[]        @relation("PartidaWo")
+  resultados Resultado[]
+
+  @@unique([id, modalidadeId]) // necessário para a chave composta de EquipeAtleta
+  @@map("equipe")
+}
+
+// Um atleta pode estar em várias equipes, mas só em UMA por modalidade.
+model EquipeAtleta {
+  atletaId     Int     @map("atleta_id")
+  equipeId     Int     @map("equipe_id")
+  modalidadeId Int     @map("modalidade_id") // repete a modalidade da equipe, de propósito
+  atleta       Usuario @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+  equipe       Equipe  @relation(fields: [equipeId, modalidadeId], references: [id, modalidadeId], onDelete: Cascade)
+
+  @@id([atletaId, equipeId])
+  @@unique([atletaId, modalidadeId])
+  @@map("equipe_atleta")
+}
+
+model EquipeAuxiliar {
+  auxiliarId Int      @map("auxiliar_id")
+  equipeId   Int      @map("equipe_id")
+  auxiliar   Auxiliar @relation(fields: [auxiliarId], references: [id], onDelete: Cascade)
+  equipe     Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+
+  @@id([auxiliarId, equipeId])
+  @@map("equipe_auxiliar")
+}
+
+// ----------------------------- OCORRÊNCIA E BOLETIM -------------------------
+model Ocorrencia {
+  id        Int              @id @default(autoincrement())
+  usuarioId Int              @map("usuario_id") // quem reportou
+  usuario   Usuario          @relation(fields: [usuarioId], references: [id])
+  disputaId Int              @map("disputa_id")
+  disputa   Disputa          @relation(fields: [disputaId], references: [id])
+  tipo      String
+  descricao String
+  dataHora  DateTime         @default(now()) @map("data_hora")
+  status    StatusOcorrencia @default(ABERTA)
+
+  @@map("ocorrencia")
+}
+
+model Boletim {
+  id                 Int           @id @default(autoincrement())
+  eventoId           Int           @map("evento_id")
+  evento             Evento        @relation(fields: [eventoId], references: [id])
+  usuarioId          Int           @map("usuario_id") // quem gerou
+  usuario            Usuario       @relation("BoletimAutor", fields: [usuarioId], references: [id])
+  nome               String
+  dataGeracao        DateTime      @default(now()) @map("data_geracao") @db.Date
+  dataPublicacao     DateTime?     @map("data_publicacao") @db.Date
+  tipo               TipoBoletim
+  caminhoArquivo     String?       @map("caminho_arquivo")
+  criteriosAplicados String?       @map("criterios_aplicados")
+  status             StatusBoletim @default(RASCUNHO)
+  publicadoPorId     Int?          @map("publicado_por_id")
+  publicadoPor       Usuario?      @relation("BoletimPublicador", fields: [publicadoPorId], references: [id])
+
+  visualizacoes BoletimVisualizacao[]
+
+  @@map("boletim")
+}
+
+model BoletimVisualizacao {
+  boletimId Int     @map("boletim_id")
+  usuarioId Int     @map("usuario_id")
+  boletim   Boletim @relation(fields: [boletimId], references: [id], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([boletimId, usuarioId])
+  @@map("boletim_visualizacao")
+}
+
+// ============================================================================
+// REGRA QUE O PRISMA NÃO EXPRESSA (adicionar depois, no SQL da migração):
+//   ALTER TABLE resultado ADD CONSTRAINT resultado_atleta_xor_equipe
+//     CHECK ((atleta_id IS NULL) <> (equipe_id IS NULL));
+// ============================================================================
