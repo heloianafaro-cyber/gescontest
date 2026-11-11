@@ -1,4 +1,5 @@
    import { exigirPerfil } from "@/modules/usuarios/sessao";
+   import { criarEvento } from "@/modules/eventos/acoes";
    import { FormEvento } from "@/components/form-evento";
 
    export const instant = false;
@@ -8,7 +9,7 @@
      return (
        <main className="space-y-4 p-8">
          <h1 className="text-xl font-semibold">Novo evento</h1>
-         <FormEvento />
+         <FormEvento acao={criarEvento} rotuloBotao="Criar evento" />
        </main>
      );
    }
