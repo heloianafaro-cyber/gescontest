@@ -1,5 +1,6 @@
    import { exigirPerfil } from "@/modules/usuarios/sessao";
    import { PaginaProvisoria } from "@/components/pagina-provisoria";
+   export const instant = false;
 
    export default async function Staff() {
      const sessao = await exigirPerfil("STAFF");

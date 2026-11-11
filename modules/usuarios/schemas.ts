@@ -1,3 +1,4 @@
+   import { hojeISO } from "./idade";
    import { z } from "zod";
 
    function cpfValido(valor: string) {
@@ -19,6 +20,12 @@
      celular: z.string().trim().min(10, "Informe o celular com DDD"),
      cpf: z.string().refine(cpfValido, "CPF inválido"),
      matricula: z.string().trim().min(1, "Informe a matrícula"),
+          dataNascimento: z
+       .string()
+       .refine(
+         (v) => !Number.isNaN(Date.parse(v)) && v >= "1900-01-01" && v <= hojeISO(),
+         "Informe uma data de nascimento válida"
+       ),
    });
 
    export const loginSchema = z.object({

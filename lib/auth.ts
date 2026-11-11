@@ -19,6 +19,7 @@
          celular: { type: "string", required: false },
          cpf: { type: "string", required: false },
          matricula: { type: "string", required: false },
+         dataNascimento: { type: "date", required: false },
        },
      },
      session: { modelName: "sessao" },
