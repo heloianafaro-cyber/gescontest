@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { calcularIdade } from "@/modules/usuarios/idade";
 import { PaginaProvisoria } from "@/components/pagina-provisoria";
 import { EnviarFicha } from "@/components/enviar-ficha";
+
 export const instant = false;
 
 export default async function Atleta() {
@@ -20,6 +21,8 @@ export default async function Atleta() {
     aviso = "Sua ficha foi enviada e está em análise.";
   } else if (atleta?.fichaStatus === "RECUSADA") {
     aviso = `Sua ficha foi recusada. Motivo: ${atleta.fichaMotivoRecusa ?? "não informado"}. Envie uma nova ficha.`;
+  } else if (atleta?.fichaStatus === "APROVADA") {
+    aviso = "Sua ficha foi aprovada.";
   }
 
   const podeEnviar = (menor && !atleta?.fichaArquivo) || atleta?.fichaStatus === "RECUSADA";

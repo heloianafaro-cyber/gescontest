@@ -1,4 +1,5 @@
-   import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+   import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+   import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
    const bucket = process.env.S3_BUCKET!;
 
@@ -20,4 +21,9 @@
 
    export async function apagarArquivo(chave: string) {
      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: chave }));
+   }
+
+   // Link que funciona por poucos minutos; o arquivo continua privado.
+   export async function linkTemporario(chave: string, segundos = 300) {
+     return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: chave }), { expiresIn: segundos });
    }
