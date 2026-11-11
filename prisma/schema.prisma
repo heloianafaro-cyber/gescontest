@@ -16,7 +16,6 @@ datasource db {
 // ============================================================================
 // GesContest – modelos do banco (PostgreSQL) a partir do DER v2
 // ============================================================================
-
 // ----------------------------- ENUMS ----------------------------------------
 enum TipoUsuario {
   PROF
@@ -92,17 +91,18 @@ model Usuario {
   delegacaoId       Int?         @map("delegacao_id") // só TECNICO e ATLETA
   delegacao         Delegacao?   @relation("DelegacaoMembros", fields: [delegacaoId], references: [id])
 
-  delegacoesCadastradas Delegacao[]           @relation("DelegacaoProf")
+  delegacoesCadastradas Delegacao[]               @relation("DelegacaoProf")
   notificacoes          Notificacao[]
   sessaos               Sessao[]
   eventosCoordenados    EventoCoordenador[]
+  aprovacoesExclusao    EventoExclusaoAprovacao[]
   contas                Conta[]
-  boletinsGerados       Boletim[]             @relation("BoletimAutor")
-  boletinsPublicados    Boletim[]             @relation("BoletimPublicador")
+  boletinsGerados       Boletim[]                 @relation("BoletimAutor")
+  boletinsPublicados    Boletim[]                 @relation("BoletimPublicador")
   boletinsVistos        BoletimVisualizacao[]
   ocorrencias           Ocorrencia[]
-  equipesCriadas        Equipe[]              @relation("EquipeProf")
-  equipesComoTecnico    Equipe[]              @relation("EquipeTecnico")
+  equipesCriadas        Equipe[]                  @relation("EquipeProf")
+  equipesComoTecnico    Equipe[]                  @relation("EquipeTecnico")
   equipesComoAtleta     EquipeAtleta[]
   inscricoesProva       InscricaoProva[]
   resultados            Resultado[]
@@ -208,10 +208,11 @@ model Evento {
   dataInicio  DateTime @map("data_inicio")
   dataFim     DateTime @map("data_fim")
 
-  locais        Local[]
-  modalidades   Modalidade[]
-  boletins      Boletim[]
-  coordenadores EventoCoordenador[]
+  locais             Local[]
+  modalidades        Modalidade[]
+  boletins           Boletim[]
+  coordenadores      EventoCoordenador[]
+  aprovacoesExclusao EventoExclusaoAprovacao[]
 
   @@map("evento")
 }
@@ -226,6 +227,19 @@ model EventoCoordenador {
 
   @@id([eventoId, usuarioId])
   @@map("evento_coordenador")
+}
+
+// Aprovações para excluir um evento que tem mais de um coordenador: o evento só é
+// excluído quando todos os coordenadores aprovam. Mudar os coordenadores zera o pedido.
+model EventoExclusaoAprovacao {
+  eventoId  Int      @map("evento_id")
+  usuarioId Int      @map("usuario_id")
+  criadoEm  DateTime @default(now()) @map("criado_em")
+  evento    Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([eventoId, usuarioId])
+  @@map("evento_exclusao_aprovacao")
 }
 
 model Local {
