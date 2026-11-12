@@ -29,9 +29,17 @@
        <main className="space-y-8 p-8">
          <div className="space-y-4">
            <h1 className="text-xl font-semibold">Editar evento</h1>
-           <Link href={`/coordenador/eventos/${evento.id}/coordenadores`} className="text-sm underline">
-             Gerenciar coordenadores
-           </Link>
+              <nav className="flex flex-wrap gap-4 text-sm">
+              <Link href={`/coordenador/eventos/${evento.id}/coordenadores`} className="underline">
+              Gerenciar coordenadores
+              </Link>
+              <Link href={`/coordenador/eventos/${evento.id}/locais`} className="underline">
+              Locais
+              </Link>
+              <Link href={`/coordenador/eventos/${evento.id}/modalidades`} className="underline">
+              Modalidades
+              </Link>
+              </nav>
            <FormEvento
              acao={editarEvento.bind(null, evento.id)}
              rotuloBotao="Salvar alterações"
