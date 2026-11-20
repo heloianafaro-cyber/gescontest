@@ -4,6 +4,10 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     agentFeedback: true,
+    // Regulamentos em PDF (até 10 MB) são enviados por formulário.
+    serverActions: {
+      bodySizeLimit: "11mb",
+    },
   },
   cacheComponents: true,
   partialPrefetching: true,

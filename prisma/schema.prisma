@@ -16,6 +16,7 @@ datasource db {
 // ============================================================================
 // GesContest – modelos do banco (PostgreSQL) a partir do DER v2
 // ============================================================================
+
 // ----------------------------- ENUMS ----------------------------------------
 enum TipoUsuario {
   PROF
@@ -45,6 +46,17 @@ enum TipoModalidade {
 enum FormatoPlacar {
   CORRIDO
   SETS
+  MARCA // tempo, distância ou peso (atletismo, natação, halterofilismo)
+  LUTA  // judô, karatê, jiu-jitsu, taekwondo
+}
+
+enum FormaVitoria {
+  IPPON
+  PONTOS
+  FINALIZACAO
+  DECISAO
+  WO
+  DESCLASSIFICACAO
 }
 
 enum StatusDisputa {
@@ -52,6 +64,8 @@ enum StatusDisputa {
   EM_ANDAMENTO
   ENCERRADA
   WO
+  CANCELADA // jogo que sobrou numa série de play-off já decidida (automático)
+  ANULADA   // partida anulada pelo coordenador (RN184)
 }
 
 enum StatusOcorrencia {
@@ -88,24 +102,25 @@ model Usuario {
   fichaStatus       FichaStatus? @map("ficha_status") // só ATLETA
   fichaArquivo      String?      @map("ficha_arquivo") // só ATLETA
   fichaMotivoRecusa String?      @map("ficha_motivo_recusa") // NOVO: motivo da recusa (tela C6a)
+  precisaTrocarSenha Boolean     @default(false) @map("precisa_trocar_senha") // conta criada por outro usuário: troca a senha provisória no 1º acesso
   delegacaoId       Int?         @map("delegacao_id") // só TECNICO e ATLETA
   delegacao         Delegacao?   @relation("DelegacaoMembros", fields: [delegacaoId], references: [id])
 
-  delegacoesCadastradas Delegacao[]               @relation("DelegacaoProf")
+  delegacoesCadastradas Delegacao[]          @relation("DelegacaoProf")
   notificacoes          Notificacao[]
   sessaos               Sessao[]
   eventosCoordenados    EventoCoordenador[]
   aprovacoesExclusao    EventoExclusaoAprovacao[]
   contas                Conta[]
-  boletinsGerados       Boletim[]                 @relation("BoletimAutor")
-  boletinsPublicados    Boletim[]                 @relation("BoletimPublicador")
+  boletinsGerados       Boletim[]            @relation("BoletimAutor")
+  boletinsPublicados    Boletim[]            @relation("BoletimPublicador")
   boletinsVistos        BoletimVisualizacao[]
   ocorrencias           Ocorrencia[]
-  equipesCriadas        Equipe[]                  @relation("EquipeProf")
-  equipesComoTecnico    Equipe[]                  @relation("EquipeTecnico")
+  equipesCriadas        Equipe[]             @relation("EquipeCriador")
+  equipesComoTecnico    Equipe[]             @relation("EquipeTecnico")
   equipesComoAtleta     EquipeAtleta[]
-  inscricoesProva       InscricaoProva[]
   resultados            Resultado[]
+  impugnacoes           Impugnacao[]
 
   @@map("usuario")
 }
@@ -199,23 +214,40 @@ model Notificacao {
 
 // ----------------------------- EVENTO, MODALIDADE, TORNEIO ------------------
 model Evento {
-  id          Int      @id @default(autoincrement())
-  nome        String
-  idadeLimite Int?     @map("idade_limite") // conta só pelo ano de nascimento
-  maxModTotal Int?     @map("max_mod_total") // vazio = sem limite
-  maxModInd   Int?     @map("max_mod_ind")
-  maxModCol   Int?     @map("max_mod_col")
-  dataInicio  DateTime @map("data_inicio")
-  dataFim     DateTime @map("data_fim")
+  id            Int      @id @default(autoincrement())
+  nome          String
+  idadeLimite   Int?     @map("idade_limite") // conta só pelo ano de nascimento
+  maxModTotal   Int?     @map("max_mod_total") // vazio = sem limite
+  maxModInd     Int?     @map("max_mod_ind")
+  maxModCol     Int?     @map("max_mod_col")
+  dataInicio    DateTime @map("data_inicio")
+  dataFim       DateTime @map("data_fim") 
 
-  locais             Local[]
-  modalidades        Modalidade[]
-  boletins           Boletim[]
-  coordenadores      EventoCoordenador[]
+  // RN151: prazo de inscrições (vazio = sem prazo definido, inscrições abertas até o início do evento)
+  inscricaoInicio DateTime? @map("inscricao_inicio")
+  inscricaoFim    DateTime? @map("inscricao_fim")
+
+  // RN191/RN195: conferência das inscrições (facultativa) e prazo de recurso
+  conferenciaInicio DateTime? @map("conferencia_inicio")
+  conferenciaFim    DateTime? @map("conferencia_fim")
+  recursoFim        DateTime? @map("recurso_fim")
+
+  // RN150: atleta acima do limite de peso na pesagem sobe de categoria ou é eliminado dela
+  pesoExcedente   PesoExcedente @default(SUBIR_CATEGORIA) @map("peso_excedente")
+
+  locais       Local[]
+  modalidades  Modalidade[]
+  modalidadesMae ModalidadeMae[]
+  boletins     Boletim[]
+  coordenadores EventoCoordenador[]
   aprovacoesExclusao EventoExclusaoAprovacao[]
+  periodos     PeriodoJogos[]
+  regulamentos Regulamento[]
+  impugnacoes Impugnacao[] 
 
   @@map("evento")
 }
+
 
 // Coordenadores do evento: um evento pode ter vários coordenadores e um
 // coordenador pode coordenar vários eventos (muitos para muitos).
@@ -259,61 +291,121 @@ model Modalidade {
   nome          String
   minAtletas    Int            @default(1) @map("min_atletas")
   maxAtletas    Int            @default(1) @map("max_atletas")
+  minEquipes    Int            @default(2) @map("min_equipes") // RN167/RN168: abaixo disso o torneio só gera aviso
   tipo          TipoModalidade
   formatoPlacar FormatoPlacar? @map("formato_placar") // só modalidades com placar
+  // RN182: só placar corrido, facultativo. PENALTIS ou PRORROGACAO_PENALTIS; vazio = o vencedor é informado à mão.
+  desempateMataMata String?    @map("desempate_mata_mata")
+  criteriosDesempate String[]  @map("criterios_desempate") // RN185: ordem dos critérios de classificação; vazio = padrão
+  prorrogacaoMin    Int?       @map("prorrogacao_min")
+  marcaMenorMelhor Boolean?    @map("marca_menor_melhor") // só formato MARCA: true = tempo, false = distância/peso
+
+  // RN155: esta modalidade é uma PROVA de uma modalidade-mãe (ex.: Natação 100m na mãe "Natação").
+  // Vazio = modalidade avulsa (ex.: Futsal), que conta por conta própria nos limites.
+  maeId Int?            @map("mae_id")
+  mae   ModalidadeMae?  @relation(fields: [maeId], references: [id], onDelete: Restrict)
+
+  // RN157: só lutas. Como as categorias (torneios) são formadas: por peso e/ou idade e/ou faixa.
+  catPeso   Boolean  @default(true)  @map("cat_peso")
+  catIdade  Boolean  @default(false) @map("cat_idade")
+  catFaixa  Boolean  @default(false) @map("cat_faixa")
+  faixas    String[] // cores de faixa disponíveis na modalidade, da mais baixa à mais alta (só se catFaixa)
 
   torneios Torneio[]
   equipes  Equipe[]
+  regulamentos Regulamento[]
 
   @@map("modalidade")
 }
 
-model CriterioDesempate {
-  id        Int     @id @default(autoincrement())
-  codigo    String  @unique // ex.: SALDO_SETS, CONFRONTO_DIRETO
-  nome      String
-  descricao String?
-  formato   String // SET | NOR | AMBOS
+// RN155/RN156: agrupa as provas de um mesmo esporte. Os limites de modalidades por atleta contam
+// UMA vez por modalidade-mãe, e o tipo (individual/coletiva) usado na contagem vem daqui:
+// tênis de mesa em duplas e revezamentos contam como individual quando a mãe é individual.
+model ModalidadeMae {
+  id       Int            @id @default(autoincrement())
+  eventoId Int            @map("evento_id")
+  evento   Evento         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome     String
+  tipo     TipoModalidade // usado só na contagem dos limites do evento
 
-  torneios TorneioCriterio[]
+  provas Modalidade[]
+  regulamentos Regulamento[]
 
-  @@map("criterio_desempate")
+  @@unique([eventoId, nome])
+  @@map("modalidade_mae")
 }
 
 model Torneio {
-  id                  Int        @id @default(autoincrement())
+  id                  Int    @id @default(autoincrement())
   nome                String // NOVO: aparece na tela C3 ("Nome do torneio")
-  modalidadeId        Int        @map("modalidade_id")
+  modalidadeId        Int    @map("modalidade_id")
   modalidade          Modalidade @relation(fields: [modalidadeId], references: [id], onDelete: Cascade)
-  sistemaDisputa      String     @map("sistema_disputa") // ex.: grupos, mata-mata, pontos corridos
+  sistemaDisputa      String @map("sistema_disputa") // ex.: grupos, mata-mata, pontos corridos
   chaves              Int?
-  pontosVit           Int        @default(3) @map("pontos_vit")
-  pontosEmp           Int        @default(1) @map("pontos_emp")
-  pontosDer           Int        @default(0) @map("pontos_der")
-  setsParaVencer      Int?       @map("sets_para_vencer") // só modalidades por sets
-  pontosPorSet        Int?       @map("pontos_por_set")
-  pontosSetDecisivo   Int?       @map("pontos_set_decisivo")
-  diferencaMinima     Int?       @map("diferenca_minima")
-  woPlacarVencedor    Int?       @map("wo_placar_vencedor")
-  woPlacarPerdedor    Int?       @map("wo_placar_perdedor")
-  woPontosSetVencedor Int?       @map("wo_pontos_set_vencedor")
+  pontosVit           Int    @default(3) @map("pontos_vit")
+  pontosEmp           Int    @default(1) @map("pontos_emp")
+  pontosDer           Int    @default(0) @map("pontos_der")
+  setsParaVencer      Int?   @map("sets_para_vencer") // só modalidades por sets
+  pontosPorSet        Int?   @map("pontos_por_set")
+  pontosSetDecisivo   Int?   @map("pontos_set_decisivo")
+  diferencaMinima     Int?   @map("diferenca_minima")
+  woPlacarVencedor    Int?   @map("wo_placar_vencedor")
+  woPlacarPerdedor    Int?   @map("wo_placar_perdedor")
+  woPontosSetVencedor Int?   @map("wo_pontos_set_vencedor")
+  pesoMin             Decimal? @map("peso_min") @db.Decimal(5, 2) // só lutas: faixa de peso da categoria (kg)
+  pesoMax             Decimal? @map("peso_max") @db.Decimal(5, 2)
+  // RN157: demais critérios da categoria (só valem se a modalidade os usa)
+  naipe               Naipe?                       // vazio = sem separação por naipe
+  idadeMin            Int?     @map("idade_min")   // idade pelo ano de nascimento (ano do evento − ano de nascimento)
+  idadeMax            Int?     @map("idade_max")
+  faixas              String[]                     // cores de faixa aceitas; vazio = todas
+  turnos              Int     @default(1) // rodízio: 1 = turno simples, 2 = turno e returno
+  variante            String? // eliminatório: SIMPLES ou REPESCAGEM
+  classificadosPorGrupo Int?  @map("classificados_por_grupo") // misto: quantos de cada grupo avançam
+  absoluto            Boolean  @default(false) // só lutas: sem limite de peso; participantes definidos no dia
+  terceiroLugar       String?  @map("terceiro_lugar") // DISPUTA_3LUGAR, DOIS_BRONZES ou SEM_DISPUTA (sistemas eliminatórios)
+  jogosPorSerie       Int?     @map("jogos_por_serie") // só play-off: série em melhor de 3, 5 ou 7
+  jogosPorSerieFinal  Int?     @map("jogos_por_serie_final") // opcional: a final usa outro tamanho de série
+  numTempos           Int?     @map("num_tempos") // só placar corrido: ex.: 2 tempos
+  duracaoTempoMin     Int?     @map("duracao_tempo_min") // minutos de cada tempo (ex.: 15 no futsal escolar)
+  intervaloTemposMin  Int?     @map("intervalo_tempos_min") // intervalo entre os tempos
+  duracaoJogoMin      Int?     @map("duracao_jogo_min") // duração total estimada do jogo (calculada no corrido)
+  intervaloJogosMin   Int      @default(10) @map("intervalo_jogos_min") // folga entre um jogo e o seguinte no mesmo local
+  sorteioEm           DateTime? @map("sorteio_em") // quando os grupos/chaves foram sorteados
 
-  criterios TorneioCriterio[]
-  disputas  Disputa[]
+  disputas      Disputa[]
+  participantes TorneioEquipe[]
 
   @@map("torneio")
 }
 
-model TorneioCriterio {
-  torneioId  Int               @map("torneio_id")
-  criterioId Int               @map("criterio_id")
-  ordem      Int
-  torneio    Torneio           @relation(fields: [torneioId], references: [id], onDelete: Cascade)
-  criterio   CriterioDesempate @relation(fields: [criterioId], references: [id])
+// Quais equipes disputam cada torneio, com o grupo sorteado e a cabeça de chave (RN138).
+// A mesma equipe pode estar em mais de um torneio (ex.: categoria de peso e absoluto).
+model TorneioEquipe {
+  torneioId     Int     @map("torneio_id")
+  equipeId      Int     @map("equipe_id")
+  torneio       Torneio @relation(fields: [torneioId], references: [id], onDelete: Cascade)
+  equipe        Equipe  @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  grupo         Int?    // número do grupo sorteado (só no sistema misto)
+  cabecaDeChave Boolean @default(false) @map("cabeca_de_chave")
+  posicao       Int?    // resultado do sorteio (RN166): posição na chave, ordem no rodízio ou ordem dentro do grupo
+  desempateManual Int?  @map("desempate_manual") // RN185: ordem decidida à mão pelo coordenador quando os critérios não resolvem o empate
 
-  @@id([torneioId, criterioId])
-  @@unique([torneioId, ordem]) // a ordem não se repete dentro do mesmo torneio
-  @@map("torneio_criterio")
+  @@id([torneioId, equipeId])
+  @@map("torneio_equipe")
+}
+
+// Períodos do dia em que os jogos acontecem (manhã, tarde, noite), por evento (RN137).
+model PeriodoJogos {
+  id               Int    @id @default(autoincrement())
+  eventoId         Int    @map("evento_id")
+  evento           Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  nome             String
+  horaInicio       String @map("hora_inicio") // "HH:MM"
+  horaFim          String @map("hora_fim")    // "HH:MM"
+  maxJogosPorLocal Int?   @map("max_jogos_por_local") // vazio = quantos couberem
+
+  @@map("periodo_jogos")
 }
 
 // ----------------------------- DISPUTAS (PARTIDA / PROVA) -------------------
@@ -323,9 +415,14 @@ model Disputa {
   torneio    Torneio       @relation(fields: [torneioId], references: [id], onDelete: Cascade)
   localId    Int?          @map("local_id")
   local      Local?        @relation(fields: [localId], references: [id], onDelete: SetNull)
-  dataHora   DateTime      @map("data_hora")
+  dataHora   DateTime?     @map("data_hora") // vazio até a agenda distribuir os jogos (RN172)
+  rodada     Int?          // rodízio e fases de mata-mata: ordem das rodadas
+  numero     Int?          // "Jogo 5" dentro do torneio (usado para dizer "vencedor do jogo 5")
   duracaoMin Int?          @map("duracao_min")
   fase       String?
+  serie       Int?         // play-off: número do confronto (série) a que o jogo pertence
+  jogoNaSerie Int?         @map("jogo_na_serie") // play-off: jogo 1, 2, 3... da série
+  motivoAnulacao String?   @map("motivo_anulacao") // só quando ANULADA
   status     StatusDisputa @default(AGENDADA)
 
   partida     Partida?
@@ -336,20 +433,35 @@ model Disputa {
 }
 
 model Partida {
-  disputaId  Int     @id @map("disputa_id")
-  disputa    Disputa @relation(fields: [disputaId], references: [id], onDelete: Cascade)
-  equipeAId  Int     @map("equipe_a_id")
-  equipeA    Equipe  @relation("PartidaEquipeA", fields: [equipeAId], references: [id], onDelete: Cascade)
-  equipeBId  Int     @map("equipe_b_id")
-  equipeB    Equipe  @relation("PartidaEquipeB", fields: [equipeBId], references: [id], onDelete: Cascade)
-  placarA    Int     @default(0) @map("placar_a")
-  placarB    Int     @default(0) @map("placar_b")
-  cartaoAmaA Int     @default(0) @map("cartao_ama_a")
-  cartaoAmaB Int     @default(0) @map("cartao_ama_b")
-  cartaoVerA Int     @default(0) @map("cartao_ver_a")
-  cartaoVerB Int     @default(0) @map("cartao_ver_b")
-  woEquipeId Int?    @map("wo_equipe_id") // equipe que deu WO
-  woEquipe   Equipe? @relation("PartidaWo", fields: [woEquipeId], references: [id], onDelete: SetNull)
+  disputaId   Int     @id @map("disputa_id")
+  disputa     Disputa @relation(fields: [disputaId], references: [id], onDelete: Cascade)
+  // Em mata-mata, a vaga fica vazia até o jogo anterior terminar (origemAId/origemBId dizem qual).
+  equipeAId   Int?    @map("equipe_a_id")
+  equipeA     Equipe? @relation("PartidaEquipeA", fields: [equipeAId], references: [id], onDelete: Cascade)
+  equipeBId   Int?    @map("equipe_b_id")
+  equipeB     Equipe? @relation("PartidaEquipeB", fields: [equipeBId], references: [id], onDelete: Cascade)
+  origemAId   Int?    @map("origem_a_id") // disputa de onde vem o vencedor (ou o perdedor) que ocupa a vaga A
+  origemBId   Int?    @map("origem_b_id")
+  origemPerdedor Boolean @default(false) @map("origem_perdedor") // true na disputa de 3º lugar
+  // Mata-mata depois de grupos: a vaga espera o classificado em tal posição de tal grupo (ex.: 1º do grupo 2).
+  origemGrupoA Int? @map("origem_grupo_a")
+  origemPosA   Int? @map("origem_pos_a")
+  origemGrupoB Int? @map("origem_grupo_b")
+  origemPosB   Int? @map("origem_pos_b")
+  placarA     Int?    @default(0) @map("placar_a") // nas lutas, opcional (pontos ou rounds)
+  placarB     Int?    @default(0) @map("placar_b")
+  vencedorId  Int?    @map("vencedor_id") // usado nas lutas, onde o placar pode não existir
+  vencedor    Equipe? @relation("PartidaVencedor", fields: [vencedorId], references: [id], onDelete: SetNull)
+  formaVitoria FormaVitoria? @map("forma_vitoria") // só lutas
+  cartaoAmaA  Int     @default(0) @map("cartao_ama_a")
+  cartaoAmaB  Int     @default(0) @map("cartao_ama_b")
+  cartaoVerA  Int     @default(0) @map("cartao_ver_a")
+  cartaoVerB  Int     @default(0) @map("cartao_ver_b")
+  decididoPor String? @map("decidido_por") // TEMPO_NORMAL, PRORROGACAO, PENALTIS ou MANUAL (mata-mata de placar corrido)
+  penaltisA   Int?    @map("penaltis_a")
+  penaltisB   Int?    @map("penaltis_b")
+  woEquipeId  Int?    @map("wo_equipe_id") // equipe que deu WO
+  woEquipe    Equipe? @relation("PartidaWo", fields: [woEquipeId], references: [id], onDelete: SetNull)
 
   sets SetPartida[]
 
@@ -373,21 +485,8 @@ model Prova {
   bateria   Int?
 
   resultados Resultado[]
-  inscricoes InscricaoProva[]
 
   @@map("prova")
-}
-
-// NOVO (faltava no DER): quem está inscrito em qual prova. Necessário para
-// contar o limite de modalidades por atleta (RN104). Revezamento conta como individual.
-model InscricaoProva {
-  atletaId Int     @map("atleta_id")
-  provaId  Int     @map("prova_id")
-  atleta   Usuario @relation(fields: [atletaId], references: [id], onDelete: Cascade)
-  prova    Prova   @relation(fields: [provaId], references: [disputaId], onDelete: Cascade)
-
-  @@id([atletaId, provaId])
-  @@map("inscricao_prova")
 }
 
 // Resultado de prova: OU atleta OU equipe (regra XOR – ver o SQL de CHECK no fim do arquivo)
@@ -406,6 +505,25 @@ model Resultado {
   @@map("resultado")
 }
 
+// RN175, RN177, RN190: regulamento em PDF (arquivo no armazenamento privado; o sistema abre para o público).
+// Escopo: geral do evento (maeId e modalidadeId vazios), de uma modalidade-mãe (maeId) ou de uma modalidade avulsa (modalidadeId).
+model Regulamento {
+  id           Int            @id @default(autoincrement())
+  eventoId     Int            @map("evento_id")
+  evento       Evento         @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  maeId        Int?           @map("mae_id")
+  mae          ModalidadeMae? @relation(fields: [maeId], references: [id], onDelete: Cascade)
+  modalidadeId Int?           @map("modalidade_id")
+  modalidade   Modalidade?    @relation(fields: [modalidadeId], references: [id], onDelete: Cascade)
+  chave        String         // caminho do arquivo no armazenamento
+  nomeArquivo  String         @map("nome_arquivo")
+  tamanho      Int
+  enviadoEm    DateTime       @default(now()) @map("enviado_em")
+
+  @@index([eventoId])
+  @@map("regulamento")
+}
+
 // ----------------------------- EQUIPES --------------------------------------
 model Equipe {
   id           Int        @id @default(autoincrement())
@@ -415,17 +533,19 @@ model Equipe {
   naipe        Naipe
   modalidadeId Int        @map("modalidade_id")
   modalidade   Modalidade @relation(fields: [modalidadeId], references: [id], onDelete: Cascade)
-  profId       Int        @map("prof_id") // Prof/Coordenador que criou
-  prof         Usuario    @relation("EquipeProf", fields: [profId], references: [id])
+  criadorId    Int        @map("criador_id") // Chefe de Delegação que criou (RN146)
+  criador      Usuario    @relation("EquipeCriador", fields: [criadorId], references: [id])
   tecnicoId    Int?       @map("tecnico_id") // responsável; vincula-se depois da criação
   tecnico      Usuario?   @relation("EquipeTecnico", fields: [tecnicoId], references: [id])
 
-  atletas    EquipeAtleta[]
-  auxiliares EquipeAuxiliar[]
-  partidasA  Partida[]        @relation("PartidaEquipeA")
-  partidasB  Partida[]        @relation("PartidaEquipeB")
-  partidasWo Partida[]        @relation("PartidaWo")
-  resultados Resultado[]
+  atletas     EquipeAtleta[]
+  auxiliares  EquipeAuxiliar[]
+  partidasA   Partida[]  @relation("PartidaEquipeA")
+  partidasB   Partida[]  @relation("PartidaEquipeB")
+  partidasWo  Partida[]  @relation("PartidaWo")
+  vitorias    Partida[]  @relation("PartidaVencedor")
+  resultados  Resultado[]
+  torneios    TorneioEquipe[]
 
   @@unique([id, modalidadeId]) // necessário para a chave composta de EquipeAtleta
   @@map("equipe")
@@ -436,6 +556,9 @@ model EquipeAtleta {
   atletaId     Int     @map("atleta_id")
   equipeId     Int     @map("equipe_id")
   modalidadeId Int     @map("modalidade_id") // repete a modalidade da equipe, de propósito
+  pesoKg       Decimal? @map("peso_kg") @db.Decimal(5, 2) // só lutas: informado na inscrição
+  pesoConfirmado Boolean @default(false) @map("peso_confirmado") // Staff confirma na pesagem oficial
+  faixa          String? // só lutas com categoria por faixa: informada na inscrição (Staff pode corrigir na pesagem)
   atleta       Usuario @relation(fields: [atletaId], references: [id], onDelete: Cascade)
   equipe       Equipe  @relation(fields: [equipeId, modalidadeId], references: [id, modalidadeId], onDelete: Cascade)
 
@@ -470,20 +593,20 @@ model Ocorrencia {
 }
 
 model Boletim {
-  id                 Int           @id @default(autoincrement())
-  eventoId           Int           @map("evento_id")
-  evento             Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuarioId          Int           @map("usuario_id") // quem gerou
-  usuario            Usuario       @relation("BoletimAutor", fields: [usuarioId], references: [id])
-  nome               String
-  dataGeracao        DateTime      @default(now()) @map("data_geracao") @db.Date
-  dataPublicacao     DateTime?     @map("data_publicacao") @db.Date
-  tipo               TipoBoletim
-  caminhoArquivo     String?       @map("caminho_arquivo")
-  criteriosAplicados String?       @map("criterios_aplicados")
-  status             StatusBoletim @default(RASCUNHO)
-  publicadoPorId     Int?          @map("publicado_por_id")
-  publicadoPor       Usuario?      @relation("BoletimPublicador", fields: [publicadoPorId], references: [id])
+  id               Int           @id @default(autoincrement())
+  eventoId         Int           @map("evento_id")
+  evento           Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuarioId        Int           @map("usuario_id") // quem gerou
+  usuario          Usuario       @relation("BoletimAutor", fields: [usuarioId], references: [id])
+  nome             String
+  dataGeracao      DateTime      @default(now()) @map("data_geracao") @db.Date
+  dataPublicacao   DateTime?     @map("data_publicacao") @db.Date
+  tipo             TipoBoletim
+  caminhoArquivo   String?       @map("caminho_arquivo")
+  criteriosAplicados String?     @map("criterios_aplicados")
+  status           StatusBoletim @default(RASCUNHO)
+  publicadoPorId   Int?          @map("publicado_por_id")
+  publicadoPor     Usuario?      @relation("BoletimPublicador", fields: [publicadoPorId], references: [id])
 
   visualizacoes BoletimVisualizacao[]
 
@@ -491,10 +614,10 @@ model Boletim {
 }
 
 model BoletimVisualizacao {
-  boletimId Int     @map("boletim_id")
-  usuarioId Int     @map("usuario_id")
-  boletim   Boletim @relation(fields: [boletimId], references: [id], onDelete: Cascade)
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  boletimId Int      @map("boletim_id")
+  usuarioId Int      @map("usuario_id")
+  boletim   Boletim  @relation(fields: [boletimId], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@id([boletimId, usuarioId])
   @@map("boletim_visualizacao")
@@ -505,3 +628,42 @@ model BoletimVisualizacao {
 //   ALTER TABLE resultado ADD CONSTRAINT resultado_atleta_xor_equipe
 //     CHECK ((atleta_id IS NULL) <> (equipe_id IS NULL));
 // ============================================================================
+
+enum PesoExcedente {
+  SUBIR_CATEGORIA
+  ELIMINAR
+}
+
+enum StatusImpugnacao {
+  IMPUGNADO        // coordenador impugnou; aguarda recurso ou decisão (pendente)
+  RECURSO_ENVIADO  // chefe de delegação enviou o recurso; aguarda decisão (pendente)
+  DEFERIDO         // a inscrição volta a valer
+  INDEFERIDO       // a inscrição é cancelada (inclui o bloqueio)
+}
+
+model Impugnacao {
+  id       Int     @id @default(autoincrement())
+  eventoId Int     @map("evento_id")
+  evento   Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  atletaId Int     @map("atleta_id")
+  atleta   Usuario @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+
+  status   StatusImpugnacao @default(IMPUGNADO)
+  bloqueio Boolean          @default(false) // RN198: decisão final, sem recurso
+  motivo   String
+  criadoEm DateTime         @default(now()) @map("criado_em")
+  criadoPorId Int           @map("criado_por_id")
+
+  recursoTexto       String?   @map("recurso_texto")
+  recursoArquivo     String?   @map("recurso_arquivo") // chave do PDF no storage privado
+  recursoNomeArquivo String?   @map("recurso_nome_arquivo")
+  recursoEm          DateTime? @map("recurso_em")
+  recursoPorId       Int?      @map("recurso_por_id")
+
+  decisaoTexto String?   @map("decisao_texto")
+  decididoPorId Int?     @map("decidido_por_id")
+  decididoEm   DateTime? @map("decidido_em")
+
+  @@unique([eventoId, atletaId])
+  @@map("impugnacao")
+}

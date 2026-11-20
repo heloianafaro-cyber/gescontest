@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { exigirPerfil } from "@/modules/usuarios/sessao";
 import { exigirCoordenadorDoEvento } from "./acesso";
 import { eventoSchema } from "./schemas";
+import { aplicarIdadeLimite } from "./idade-limite";
 
 // "valores" devolve o que a pessoa digitou, para o formulário não esvaziar quando há erro.
 export type EstadoForm = { erro: string; valores?: Record<string, string> };
@@ -18,6 +19,12 @@ function paraBanco(d: DadosEvento) {
     nome: d.nome,
     dataInicio: new Date(d.dataInicio),
     dataFim: new Date(d.dataFim),
+    inscricaoInicio: d.inscricaoInicio ? new Date(d.inscricaoInicio) : null,
+    inscricaoFim: d.inscricaoFim ? new Date(d.inscricaoFim) : null,
+    conferenciaInicio: d.conferenciaInicio ? new Date(d.conferenciaInicio) : null,
+    conferenciaFim: d.conferenciaFim ? new Date(d.conferenciaFim) : null,
+    recursoFim: d.recursoFim ? new Date(d.recursoFim) : null,
+    pesoExcedente: d.pesoExcedente,
     idadeLimite: d.idadeLimite ?? null,
     maxModTotal: d.maxModTotal ?? null,
     maxModInd: d.maxModInd ?? null,
@@ -62,6 +69,8 @@ export async function editarEvento(
   }
 
   await prisma.evento.update({ where: { id: eventoId }, data: paraBanco(resultado.data) });
+
+  await aplicarIdadeLimite(eventoId);
 
   revalidatePath("/coordenador/eventos");
   redirect("/coordenador/eventos");

@@ -11,6 +11,8 @@ export default async function Coordenador() {
       nome={sessao.user.name}
       links={[
         { href: "/coordenador/eventos", rotulo: "Eventos" },
+        { href: "/coordenador/delegacoes", rotulo: "Delegações" },
+        { href: "/coordenador/contas", rotulo: "Contas de Staff e Chefes de delegação" },
         { href: "/coordenador/fichas", rotulo: "Fichas pendentes" },
       ]}
     />
