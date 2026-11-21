@@ -11,6 +11,9 @@ export default async function Home() {
       <Link href="/regulamentos" className="underline">
         Regulamentos
       </Link>
+      <Link href="/agenda" className="block underline">
+        Agenda de jogos
+      </Link>
     </main>
   );
 }

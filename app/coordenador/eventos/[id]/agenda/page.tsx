@@ -124,6 +124,9 @@ export default async function AgendaDoEvento({
           <Link href={`/coordenador/eventos/${eventoId}/agenda/jogos`} className="underline">
             Ver a agenda de jogos
           </Link>
+          <Link href={`/agenda/${eventoId}`} className="underline">
+            Links para Google Agenda e Outlook (página pública)
+          </Link>
         </div>
         <p className="text-xs text-muted-foreground">
           Salve a configuração acima antes de distribuir. Os períodos do dia ficam em &quot;Períodos dos jogos&quot; no
