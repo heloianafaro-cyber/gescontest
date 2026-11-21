@@ -93,6 +93,11 @@ export async function jogosDoEvento(eventoId: number): Promise<JogoPublico[]> {
   return linhas.map(paraJogo);
 }
 
+export async function jogosDoTorneio(torneioId: number): Promise<JogoPublico[]> {
+  const linhas = await buscar({ torneioId });
+  return linhas.map(paraJogo);
+}
+
 // RN216
 export async function eventoAtualId(): Promise<number | null> {
   const eventos = await prisma.evento.findMany({ select: { id: true, dataInicio: true, dataFim: true } });
