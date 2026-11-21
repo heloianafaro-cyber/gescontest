@@ -82,6 +82,9 @@ export default async function AgendaDeJogos({
                     <td className="w-24 py-1 text-xs text-muted-foreground">
                       {l.travada ? "travado" : ""} {l.status !== "AGENDADA" ? l.status.toLowerCase() : ""}
                     </td>
+                    <td className="w-16 py-1 text-right text-sm">
+                      <Link href={`/coordenador/eventos/${eventoId}/agenda/jogos/${l.id}`} className="underline">Editar</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -96,7 +99,12 @@ export default async function AgendaDeJogos({
           <ul className="list-disc space-y-1 pl-5 text-sm">
             {semHorario.map((d) => (
               <li key={d.id}>
-                {d.torneio.modalidade.nome} — {d.torneio.nome} · {d.fase} · {confronto(d)}
+                {d.torneio.modalidade.nome} — {d.torneio.nome} · {d.fase} · {confronto(d)}{" "}
+                {d.status === "AGENDADA" && (
+                  <Link href={`/coordenador/eventos/${eventoId}/agenda/jogos/${d.id}`} className="underline">
+                    Definir horário
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
