@@ -280,7 +280,7 @@ model Local {
   eventoId Int       @map("evento_id")
   evento   Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   disputas Disputa[]
-
+  modalidades ModalidadeLocal[]
   @@map("local")
 }
 
@@ -314,6 +314,9 @@ model Modalidade {
   torneios Torneio[]
   equipes  Equipe[]
   regulamentos Regulamento[]
+  descansoEquipeMin Int  @default(30) @map("descanso_equipe_min") 
+  // RN210: descanso mínimo entre dois jogos da mesma equipe (0 = sem descanso)
+  locais            ModalidadeLocal[]
 
   @@map("modalidade")
 }
@@ -428,6 +431,8 @@ model Disputa {
   partida     Partida?
   prova       Prova?
   ocorrencias Ocorrencia[]
+  travada Boolean @default(false) 
+  // RN212: jogo fixado à mão; a agenda automática não mexe nele
 
   @@map("disputa")
 }
@@ -666,4 +671,15 @@ model Impugnacao {
 
   @@unique([eventoId, atletaId])
   @@map("impugnacao")
+}
+
+// RN209: quais locais servem a cada modalidade. Modalidade sem nenhum local marcado aceita qualquer local.
+  model ModalidadeLocal {
+  modalidadeId Int        @map("modalidade_id")
+  localId      Int        @map("local_id")
+  modalidade   Modalidade @relation(fields: [modalidadeId], references: [id], onDelete: Cascade)
+  local        Local      @relation(fields: [localId], references: [id], onDelete: Cascade)
+
+  @@id([modalidadeId, localId])
+  @@map("modalidade_local")
 }
