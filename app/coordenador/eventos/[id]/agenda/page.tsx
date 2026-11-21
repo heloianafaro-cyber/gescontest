@@ -53,8 +53,8 @@ export default async function AgendaDoEvento({
           <p className="max-w-3xl text-xs text-muted-foreground">
             <strong>Descanso:</strong> tempo mínimo, em minutos, entre o fim de um jogo e o início do próximo da mesma
             equipe. Use 0 nas modalidades que não precisam (como natação e xadrez).{" "}
-            <strong>Locais:</strong> marque onde cada modalidade pode ser disputada; sem nenhuma marca, vale qualquer
-            local do evento.
+            <strong>Locais:</strong> marque onde cada modalidade pode ser disputada. Modalidade sem nenhum local marcado
+            não é agendada.
           </p>
 
           {locais.length === 0 && (
@@ -115,9 +115,21 @@ export default async function AgendaDoEvento({
         </form>
       )}
 
-      <p className="max-w-3xl text-xs text-muted-foreground">
-        A distribuição automática dos jogos nos dias e horários chega na próxima parte.
-      </p>
+      <section className="max-w-3xl space-y-2 border-t pt-4">
+        <h2 className="font-medium">Jogos</h2>
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link href={`/coordenador/eventos/${eventoId}/agenda/distribuir`} className="underline">
+            Distribuir jogos automaticamente
+          </Link>
+          <Link href={`/coordenador/eventos/${eventoId}/agenda/jogos`} className="underline">
+            Ver a agenda de jogos
+          </Link>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Salve a configuração acima antes de distribuir. Os períodos do dia ficam em &quot;Períodos dos jogos&quot; no
+          Editar evento.
+        </p>
+      </section>
     </main>
   );
 }
