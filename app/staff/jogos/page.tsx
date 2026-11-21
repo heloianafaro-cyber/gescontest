@@ -25,7 +25,7 @@ export default async function JogosEventos() {
 
   return (
     <main className="space-y-4 p-8">
-      <h1 className="text-xl font-semibold">Resultados de jogos e combates</h1>
+      <h1 className="text-xl font-semibold">Registro de resultados</h1>
       <Link href="/staff" className="text-sm underline">Voltar</Link>
       {comJogos.length === 0 && <p>Nenhum evento com jogos gerados.</p>}
       <ul className="max-w-xl space-y-2">
