@@ -45,6 +45,9 @@ export default async function Eventos() {
               <Link href={`/coordenador/eventos/${e.id}/conferencia`} className="text-sm underline">
                 Conferência
               </Link>
+              <Link href={`/coordenador/eventos/${e.id}/listas`} className="text-sm underline">
+                Listas de atletas
+              </Link>
             </div>
           </li>
         ))}

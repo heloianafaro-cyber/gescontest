@@ -32,6 +32,7 @@ export default async function EditarEvento({ params }: { params: Promise<{ id: s
     ["periodos", "Períodos dos jogos"],
     ["regulamentos", "Regulamentos"],
     ["conferencia", "Conferência"],
+    ["listas", "Listas de atletas"],
   ] as const;
 
   return (
