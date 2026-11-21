@@ -69,3 +69,22 @@ export function paraCampoBahia(epochMin: number): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 }
+
+// Dias do evento ("AAAA-MM-DD"), do início ao fim, inclusive. Só esses dias podem receber jogos.
+export function diasDoEvento(inicio: Date, fim: Date): string[] {
+  const dia = (d: Date) => d.toISOString().slice(0, 10);
+  const dias: string[] = [];
+  const fimTxt = dia(fim);
+  for (let d = new Date(`${dia(inicio)}T00:00:00Z`); dia(d) <= fimTxt && dias.length < 60; d = new Date(d.getTime() + 86400000)) {
+    dias.push(dia(d));
+  }
+  return dias;
+}
+
+// Junta o dia escolhido na lista e a hora ("HH:MM") no formato que lerDataHoraBahia entende.
+export function juntarDiaHora(dia: unknown, hora: unknown, diasValidos: string[]): string | null {
+  if (typeof dia !== "string" || typeof hora !== "string") return null;
+  if (!diasValidos.includes(dia)) return null;
+  if (!/^\d{2}:\d{2}$/.test(hora.trim())) return null;
+  return `${dia}T${hora.trim()}`;
+}

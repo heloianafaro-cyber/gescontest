@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { exigirCoordenadorDoEvento } from "@/modules/eventos/acesso";
 import { carregarJogoParaEdicao } from "@/modules/agenda/mover-db";
-import { paraCampoBahia } from "@/modules/agenda/conferir";
+import { diasDoEvento, paraCampoBahia } from "@/modules/agenda/conferir";
 import { alternarTrava, limparHorario, salvarHorario } from "@/modules/agenda/acoes-mover";
 import { Button } from "@/components/ui/button";
 
@@ -26,10 +26,17 @@ export default async function EditarHorarioDoJogo({
   if (!dados) notFound();
   const { disputa, evento, duracaoMin, contexto } = dados;
 
-  const valorInicial = disputa.dataHora ? paraCampoBahia(Math.floor(disputa.dataHora.getTime() / 60000)) : "";
+  const dias = diasDoEvento(evento.dataInicio, evento.dataFim);
+  const atual = disputa.dataHora ? paraCampoBahia(Math.floor(disputa.dataHora.getTime() / 60000)) : "";
+  const diaAtual = atual ? atual.slice(0, 10) : "";
+  const horaAtual = atual ? atual.slice(11, 16) : "";
+  const rotuloDia = (d: string) =>
+    new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC", weekday: "long", day: "2-digit", month: "2-digit" }).format(
+      new Date(`${d}T12:00:00Z`)
+    );
   const iniciado = disputa.status !== "AGENDADA";
   const marcados = new Set(contexto.locaisMarcados);
-  const lista = `/coordenador/eventos/${eventoId}/agenda/jogos`;
+  const lista = `/coordenador/eventos/${eventoId}/agenda/jogos?torneio=${disputa.torneioId}`;
 
   return (
     <main className="max-w-xl space-y-6 p-8">
@@ -73,11 +80,26 @@ export default async function EditarHorarioDoJogo({
           </label>
 
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Data e hora de início</span>
+            <span className="font-medium">Dia (só os dias do evento)</span>
+            <select
+              name="dia"
+              defaultValue={dias.includes(diaAtual) ? diaAtual : ""}
+              required
+              className="w-full rounded-md border bg-background px-2 py-1 capitalize"
+            >
+              <option value="" disabled>Escolha o dia</option>
+              {dias.map((d) => (
+                <option key={d} value={d}>{rotuloDia(d)}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium">Hora de início</span>
             <input
-              type="datetime-local"
-              name="dataHora"
-              defaultValue={valorInicial}
+              type="time"
+              name="hora"
+              defaultValue={horaAtual}
               required
               className="w-full rounded-md border bg-background px-2 py-1"
             />

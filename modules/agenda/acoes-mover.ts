@@ -4,11 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { exigirCoordenadorDoEvento } from "@/modules/eventos/acesso";
-import { avisosDoHorario, lerDataHoraBahia, type Aviso } from "@/modules/agenda/conferir";
+import { avisosDoHorario, diasDoEvento, juntarDiaHora, lerDataHoraBahia, type Aviso } from "@/modules/agenda/conferir";
 import { carregarJogoParaEdicao, nomesDosJogos } from "@/modules/agenda/mover-db";
 
 const rotaDoJogo = (eventoId: number, disputaId: number) => `/coordenador/eventos/${eventoId}/agenda/jogos/${disputaId}`;
-const rotaLista = (eventoId: number) => `/coordenador/eventos/${eventoId}/agenda/jogos`;
+const rotaLista = (eventoId: number, torneioId?: number) =>
+  `/coordenador/eventos/${eventoId}/agenda/jogos${torneioId ? `?torneio=${torneioId}` : ""}`;
+const comParametro = (rota: string, chave: string, valor: string) =>
+  `${rota}${rota.includes("?") ? "&" : "?"}${chave}=${encodeURIComponent(valor)}`;
 
 function textoDoAviso(a: Aviso, nomes: Map<number, string>, descanso: number): string {
   switch (a.tipo) {
@@ -40,8 +43,11 @@ export async function salvarHorario(eventoId: number, disputaId: number, formDat
 
   const localId = Number(formData.get("localId"));
   if (!evento.locais.some((l) => l.id === localId)) erro("Escolha um local do evento.");
-  const inicio = lerDataHoraBahia(formData.get("dataHora"));
-  if (inicio === null) erro("Informe uma data e hora válidas.");
+  // Só os dias do evento podem ser escolhidos (a data vem de uma lista).
+  const junto = juntarDiaHora(formData.get("dia"), formData.get("hora"), diasDoEvento(evento.dataInicio, evento.dataFim));
+  if (junto === null) erro("Escolha um dia do evento e informe a hora de início.");
+  const inicio = lerDataHoraBahia(junto);
+  if (inicio === null) erro("Informe uma hora válida.");
 
   const jogo = { jogoId: disputa.id, localId, inicio: inicio as number, fim: (inicio as number) + duracaoMin, ...base };
   const avisos = avisosDoHorario(jogo, contexto);
@@ -57,14 +63,14 @@ export async function salvarHorario(eventoId: number, disputaId: number, formDat
     data: { dataHora: new Date((inicio as number) * 60000), localId, duracaoMin, travada: true },
   });
   revalidatePath(rotaLista(eventoId));
-  redirect(`${rotaLista(eventoId)}?ok=${encodeURIComponent("Jogo movido e travado.")}`);
+  redirect(comParametro(rotaLista(eventoId, disputa.torneioId), "ok", "Jogo movido e travado."));
 }
 
 export async function alternarTrava(eventoId: number, disputaId: number) {
   await exigirCoordenadorDoEvento(eventoId);
   const d = await prisma.disputa.findFirst({
     where: { id: disputaId, torneio: { modalidade: { eventoId } } },
-    select: { id: true, travada: true, dataHora: true },
+    select: { id: true, travada: true, dataHora: true, torneioId: true },
   });
   const volta = rotaDoJogo(eventoId, disputaId);
   if (!d) redirect(`${rotaLista(eventoId)}?ok=${encodeURIComponent("Jogo não encontrado.")}`);
@@ -79,7 +85,7 @@ export async function limparHorario(eventoId: number, disputaId: number) {
   await exigirCoordenadorDoEvento(eventoId);
   const d = await prisma.disputa.findFirst({
     where: { id: disputaId, torneio: { modalidade: { eventoId } } },
-    select: { id: true, status: true },
+    select: { id: true, status: true, torneioId: true },
   });
   if (!d) redirect(`${rotaLista(eventoId)}?ok=${encodeURIComponent("Jogo não encontrado.")}`);
   if (d.status !== "AGENDADA") {
@@ -87,5 +93,5 @@ export async function limparHorario(eventoId: number, disputaId: number) {
   }
   await prisma.disputa.update({ where: { id: d.id }, data: { dataHora: null, localId: null, travada: false } });
   revalidatePath(rotaLista(eventoId));
-  redirect(`${rotaLista(eventoId)}?ok=${encodeURIComponent("Horário removido. O jogo voltou a ficar sem horário.")}`);
+  redirect(comParametro(rotaLista(eventoId, d.torneioId), "ok", "Horário removido. O jogo voltou a ficar sem horário."));
 }
