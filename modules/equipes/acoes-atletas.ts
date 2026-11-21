@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { exigirPerfil } from "@/modules/usuarios/sessao";
 import type { EstadoForm } from "@/modules/eventos/acoes";
 import { inscreverAtleta, cancelarInscricaoAtleta } from "./regras-inscricao";
+import { redirect } from "next/navigation";
 
 async function chefeLogado() {
   const sessao = await exigirPerfil("TECNICO");
@@ -82,6 +83,7 @@ export async function cancelarInscricao(formData: FormData) {
   const atletaId = z.coerce.number().int().positive().parse(formData.get("atletaId"));
   const equipeId = z.coerce.number().int().positive().parse(formData.get("equipeId"));
 
-  await cancelarInscricaoAtleta({ atletaId, equipeId, delegacaoDoChefe: chefe.delegacaoId });
+  const r = await cancelarInscricaoAtleta({ atletaId, equipeId, delegacaoDoChefe: chefe.delegacaoId });
+  if (r.erro) redirect(`/tecnico/atletas/${atletaId}?erro=${encodeURIComponent(r.erro)}`);
   revalidatePath(`/tecnico/atletas/${atletaId}`);
 }

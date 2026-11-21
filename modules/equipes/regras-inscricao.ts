@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { situacaoInscricao } from "@/modules/eventos/inscricoes";
 import { atribuirCategoria } from "./categoria";
+import { avisarSeAbaixoDoMinimo } from "@/modules/eventos/minimos";
 
 type Alvo = { modalidadeId: number } | { equipeId: number };
 
@@ -173,7 +174,6 @@ export async function inscreverAtleta(p: Pedido): Promise<ResultadoInscricao> {
       data: { atletaId: atleta.id, equipeId, modalidadeId: modalidade.id, pesoKg, faixa },
     });
   }
-  return { erro: "" };
 }
 
 // Cancela a inscrição do atleta em uma equipe/modalidade. Em prova individual, a equipe de 1 some junto.
@@ -205,12 +205,13 @@ export async function cancelarInscricaoAtleta(p: {
     return { erro: "A equipe já tem jogos marcados; fale com o coordenador." };
   }
 
-  if (equipe.modalidade.tipo === "INDIVIDUAL") {
+    if (equipe.modalidade.tipo === "INDIVIDUAL") {
     await prisma.equipe.delete({ where: { id: equipe.id } }); // apaga junto o vínculo (cascata)
   } else {
     await prisma.equipeAtleta.delete({
       where: { atletaId_equipeId: { atletaId: p.atletaId, equipeId: p.equipeId } },
     });
+    await avisarSeAbaixoDoMinimo(p.equipeId);
   }
   return { erro: "" };
 }

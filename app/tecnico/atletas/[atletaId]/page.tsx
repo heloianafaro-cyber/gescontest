@@ -9,9 +9,16 @@ import { BotaoConfirmar } from "@/components/botao-confirmar";
 
 export const instant = false;
 
-export default async function InscricoesDoAtleta({ params }: { params: Promise<{ atletaId: string }> }) {
+export default async function InscricoesDoAtleta({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ atletaId: string }>;
+  searchParams: Promise<{ erro?: string }>;
+}) {
   const sessao = await exigirPerfil("TECNICO");
   const { atletaId: texto } = await params;
+  const { erro } = await searchParams;
   const atletaId = Number(texto);
   if (!Number.isInteger(atletaId)) notFound();
 
@@ -66,6 +73,7 @@ export default async function InscricoesDoAtleta({ params }: { params: Promise<{
             Ficha de autorização recusada: o atleta não pode ser inscrito até enviar outra.
           </p>
         )}
+        {erro && <p className="text-sm text-red-600">{erro}</p>}
         <Link href="/tecnico/atletas" className="text-sm underline">Voltar</Link>
       </div>
 

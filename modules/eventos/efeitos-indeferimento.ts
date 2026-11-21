@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { aplicarAcao } from "@/modules/torneios/avanco";
+import { avisarSeAbaixoDoMinimo } from "@/modules/eventos/minimos";
 
 // RN196, RN198, RN199: efeitos de uma inscrição indeferida ou de um atleta bloqueado, em qualquer momento.
 // Devolve avisos para o coordenador. Os jogos já encerrados nunca são alterados.
@@ -25,10 +26,11 @@ export async function aplicarEfeitosIndeferimento(eventoId: number, atletaId: nu
     const equipe = v.equipe;
 
     // Modalidade coletiva: o atleta sai da equipe; a equipe continua na competição.
-    if (equipe.modalidade.tipo === "COLETIVA") {
+        if (equipe.modalidade.tipo === "COLETIVA") {
       await prisma.equipeAtleta.delete({
         where: { atletaId_equipeId: { atletaId, equipeId: equipe.id } },
       });
+      await avisarSeAbaixoDoMinimo(equipe.id);
       notas.push(`${nome} saiu da equipe ${equipe.nome} (${equipe.modalidade.nome}).`);
       continue;
     }
