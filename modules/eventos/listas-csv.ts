@@ -17,6 +17,7 @@ export type EquipeLista = {
   grupo: number | null;
   cabeca: boolean;
   posicao: number | null;
+  minimo: number; // mínimo de atletas da modalidade
   atletas: AtletaLista[];
 };
 
@@ -29,8 +30,13 @@ export type ListaTorneio = {
   equipes: EquipeLista[];
 };
 
+// RN207: equipe com menos atletas que o mínimo da modalidade recebe este aviso (lista e notificação).
+export function avisoMinimo(inscritos: number, minimo: number): string | null {
+  return inscritos < minimo ? `Equipe não atingiu o mínimo de inscritos (${inscritos} de ${minimo})` : null;
+}
+
 // Protege contra fórmulas do Excel (=, +, -, @) e escapa aspas e separadores.
-function celula(valor: string | number | null): string {
+export function celula(valor: string | number | null): string {
   let t = valor === null ? "" : String(valor);
   if (/^[=+\-@\t\r]/.test(t)) t = `'${t}`;
   if (/[";\n\r]/.test(t)) t = `"${t.replace(/"/g, '""')}"`;
@@ -42,6 +48,7 @@ export function listaParaCsv(l: ListaTorneio): string {
   const cab = ["Torneio", "Grupo", "Equipe", "Delegação", "Naipe", "Cabeça de chave", "Atleta", "Ano de nascimento"];
   if (l.temPeso) cab.push("Peso (kg)", "Peso confirmado");
   if (l.temFaixa) cab.push("Faixa");
+  cab.push("Aviso");
 
   const linhas: string[] = [cab.map(celula).join(";")];
   for (const e of l.equipes) {
@@ -51,6 +58,7 @@ export function listaParaCsv(l: ListaTorneio): string {
       const l2: (string | number | null)[] = [...base, a?.nome ?? "", a?.anoNascimento ?? ""];
       if (l.temPeso) l2.push(a?.pesoKg ?? "", a ? (a.pesoKg ? (a.pesoConfirmado ? "Sim" : "Não") : "") : "");
       if (l.temFaixa) l2.push(a?.faixa ?? "");
+      l2.push(avisoMinimo(e.atletas.length, e.minimo) ?? "");
       linhas.push(l2.map(celula).join(";"));
     }
   }

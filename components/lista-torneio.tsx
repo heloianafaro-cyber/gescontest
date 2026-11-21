@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BotaoImprimir } from "@/components/botao-imprimir";
-import type { ListaTorneio } from "@/modules/eventos/listas-csv";
+import { avisoMinimo, type ListaTorneio } from "@/modules/eventos/listas-csv";
 
 // Lista pronta para imprimir (os botões e links somem na impressão).
 export function ListaTorneioView({
@@ -44,6 +44,9 @@ export function ListaTorneioView({
               {e.nome} <span className="font-normal text-muted-foreground">({e.delegacao})</span>
               {e.grupo !== null && <span className="font-normal text-muted-foreground"> · Grupo {e.grupo}</span>}
             </h2>
+            {avisoMinimo(e.atletas.length, e.minimo) && (
+              <p className="text-sm font-medium text-amber-700">⚠ {avisoMinimo(e.atletas.length, e.minimo)}</p>
+            )}
             {e.atletas.length === 0 ? (
               <p className="text-sm italic text-muted-foreground">Sem atletas inscritos.</p>
             ) : (

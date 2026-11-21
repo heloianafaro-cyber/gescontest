@@ -27,7 +27,7 @@ export async function carregarLista(eventoId: number, torneioId: number): Promis
     where: { id: torneioId, modalidade: { eventoId } },
     select: {
       nome: true,
-      modalidade: { select: { nome: true, evento: { select: { nome: true } } } },
+      modalidade: { select: { nome: true, minAtletas: true, evento: { select: { nome: true } } } },
       participantes: {
         select: {
           grupo: true,
@@ -63,6 +63,7 @@ export async function carregarLista(eventoId: number, torneioId: number): Promis
     grupo: p.grupo,
     cabeca: p.cabecaDeChave,
     posicao: p.posicao,
+    minimo: t.modalidade.minAtletas,
     atletas: p.equipe.atletas
       .map((a) => ({
         nome: a.atleta.nome,

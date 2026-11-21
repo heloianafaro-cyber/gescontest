@@ -14,6 +14,7 @@ export default async function Tecnico() {
         { href: "/tecnico/equipes", rotulo: "Equipes" },
         { href: "/tecnico/auxiliares", rotulo: "Técnicos e assistentes" },
         { href: "/tecnico/conferencia", rotulo: "Conferência das inscrições" },
+        { href: "/tecnico/listas", rotulo: "Listas da delegação" },
       ]}
     />
   );
