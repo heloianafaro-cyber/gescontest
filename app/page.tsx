@@ -49,6 +49,8 @@ export default async function Home() {
           <nav className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Atalhos do evento">
             <Link href={`/jogos/${atual.id}`} className="underline">Todos os jogos</Link>
             <Link href={`/classificacao/${atual.id}`} className="underline">Classificação e chaves</Link>
+            <Link href={`/podio/${atual.id}`} className="underline">Pódio</Link>
+            <Link href={`/boletins/${atual.id}`} className="underline">Boletins</Link>
             <Link href={`/agenda/${atual.id}`} className="underline">Levar para minha agenda</Link>
             <Link href="/regulamentos" className="underline">Regulamentos</Link>
           </nav>

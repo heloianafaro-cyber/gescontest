@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { hojeNaBahia } from "@/modules/eventos/conferencia";
 import { avisarChefesDoEvento } from "@/modules/eventos/minimos";
 import { deveAvisarMinimosHoje } from "@/modules/eventos/minimos-regras";
+import { avisarBoletinsPendentes } from "@/modules/boletins/avisos";
 
 // Rotina que roda uma vez por dia (Vercel Cron). Hoje só faz o RN208; a limpeza de fichas e arquivos
 // (RN109/RN110) entra aqui depois.
@@ -17,5 +18,7 @@ export async function rodarRotinaDiaria() {
     const r = await avisarChefesDoEvento({ id: ev.id, nome: ev.nome }, true);
     avisos.push({ evento: ev.nome, ...r });
   }
-  return { dia: hoje, avisosDeMinimo: avisos };
+  // RN222: recomenda ao coordenador gerar o boletim dos dias já completos.
+  const avisosDeBoletim = await avisarBoletinsPendentes();
+  return { dia: hoje, avisosDeMinimo: avisos, avisosDeBoletim };
 }

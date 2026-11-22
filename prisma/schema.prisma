@@ -613,6 +613,9 @@ model Boletim {
   publicadoPorId   Int?          @map("publicado_por_id")
   publicadoPor     Usuario?      @relation("BoletimPublicador", fields: [publicadoPorId], references: [id])
 
+  dia      String?  // boletim diário: "2026-11-21"; vazio no boletim final
+  conteudo Json?    // o boletim fica "congelado" como foi gerado (RN219)
+
   visualizacoes BoletimVisualizacao[]
 
   @@map("boletim")

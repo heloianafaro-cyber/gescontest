@@ -5,6 +5,8 @@ import { JogoLinha } from "@/components/jogo-publico";
 import { jogosDoTorneio } from "@/modules/publico/consultas";
 import { agruparPorFase } from "@/modules/publico/chave";
 import { tabelasDoTorneio } from "@/modules/torneios/classificacao-db";
+import { podioDoTorneio } from "@/modules/publico/podio-db";
+import { PodioTorneio } from "@/components/podio-torneio";
 
 export const instant = false;
 
@@ -27,6 +29,7 @@ export default async function TorneioPublico({ params }: { params: Promise<{ eve
   const fases = agruparPorFase(jogos.map((j) => ({ ...j, numero: porId.get(j.id)?.numero ?? null, rodada: porId.get(j.id)?.rodada ?? null })));
 
   const modalidade = t.modalidade.nome;
+  const podio = await podioDoTorneio(torneioId);
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-6 sm:p-8">
@@ -37,6 +40,13 @@ export default async function TorneioPublico({ params }: { params: Promise<{ eve
           <Link href={`/jogos/${eventoId}?modalidade=${t.modalidadeId}`} className="underline">Jogos desta modalidade</Link>
         </div>
       </header>
+
+      {podio?.completo && (
+        <section className="space-y-2 rounded-lg border p-4">
+          <h2 className="text-lg font-semibold">Pódio</h2>
+          <PodioTorneio podio={podio} />
+        </section>
+      )}
 
       {dados.tabelas.map((tab) => (
         <section key={tab.grupo ?? 0} className="space-y-2">

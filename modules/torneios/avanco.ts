@@ -16,31 +16,73 @@ export const FORMAS_LUTA = [
   { valor: "DESCLASSIFICACAO", rotulo: "Desclassificação" },
 ];
 
+const COM_RESULTADO = ["ENCERRADA", "WO", "EM_ANDAMENTO", "ANULADA"];
+
+// Volta um jogo a "agendado", sem resultado (usado quando as equipes dele mudam ou ficam sem definição).
+async function zerarResultado(tx: Tx, disputaId: number) {
+  await tx.partida.update({
+    where: { disputaId },
+    data: { placarA: null, placarB: null, vencedorId: null, formaVitoria: null, woEquipeId: null, decididoPor: null, penaltisA: null, penaltisB: null },
+  });
+  await tx.setPartida.deleteMany({ where: { partidaId: disputaId } });
+  await tx.disputa.update({ where: { id: disputaId }, data: { status: "AGENDADA", motivoAnulacao: null } });
+}
+
 // Recalcula, a partir dos resultados, quem ocupa cada vaga e quais jogos de série ficam cancelados (RN183).
+// Um jogo cujas equipes mudam (ou deixam de estar definidas) perde o resultado, porque ele valia para outro confronto (RN223).
 export async function sincronizarTorneio(tx: Tx, torneioId: number) {
   // Primeiro os classificados dos grupos (misto); depois o avanço do mata-mata a partir deles.
   await preencherClassificados(tx, torneioId);
-  const lista = await tx.disputa.findMany({ where: { torneioId }, include: { partida: true } });
-  const entrada = lista
-    .filter((d) => d.partida)
-    .map((d) => ({
-      id: d.id,
-      serie: d.serie,
-      jogoNaSerie: d.jogoNaSerie,
-      status: d.status as string,
-      equipeAId: d.partida!.equipeAId,
-      equipeBId: d.partida!.equipeBId,
-      origemAId: d.partida!.origemAId,
-      origemBId: d.partida!.origemBId,
-      origemPerdedor: d.partida!.origemPerdedor,
-      vencedorId: d.partida!.vencedorId,
-    }));
-  for (const m of planejarVagas(entrada)) {
-    if (m.status) await tx.disputa.update({ where: { id: m.id }, data: { status: m.status as never } });
-    const dados: { equipeAId?: number | null; equipeBId?: number | null } = {};
-    if ("equipeAId" in m) dados.equipeAId = m.equipeAId ?? null;
-    if ("equipeBId" in m) dados.equipeBId = m.equipeBId ?? null;
-    if (Object.keys(dados).length > 0) await tx.partida.update({ where: { disputaId: m.id }, data: dados });
+
+  for (let volta = 0; volta < 12; volta++) {
+    const lista = await tx.disputa.findMany({ where: { torneioId }, include: { partida: true } });
+    let zerou = false;
+
+    // Jogo com resultado, mas sem as duas equipes definidas: resultado órfão (de uma correção anterior).
+    for (const d of lista) {
+      if (!d.partida || !COM_RESULTADO.includes(d.status as string)) continue;
+      if (d.partida.equipeAId === null || d.partida.equipeBId === null) {
+        await zerarResultado(tx, d.id);
+        zerou = true;
+      }
+    }
+    if (zerou) continue;
+
+    const entrada = lista
+      .filter((d) => d.partida)
+      .map((d) => ({
+        id: d.id,
+        serie: d.serie,
+        jogoNaSerie: d.jogoNaSerie,
+        status: d.status as string,
+        equipeAId: d.partida!.equipeAId,
+        equipeBId: d.partida!.equipeBId,
+        origemAId: d.partida!.origemAId,
+        origemBId: d.partida!.origemBId,
+        origemPerdedor: d.partida!.origemPerdedor,
+        vencedorId: d.partida!.vencedorId,
+      }));
+    const mudancas = planejarVagas(entrada);
+    for (const m of mudancas) {
+      const atual = lista.find((d) => d.id === m.id);
+      if (!atual?.partida) continue;
+      const novaA = "equipeAId" in m ? (m.equipeAId ?? null) : atual.partida.equipeAId;
+      const novaB = "equipeBId" in m ? (m.equipeBId ?? null) : atual.partida.equipeBId;
+      const trocou = novaA !== atual.partida.equipeAId || novaB !== atual.partida.equipeBId;
+
+      const dados: { equipeAId?: number | null; equipeBId?: number | null } = {};
+      if ("equipeAId" in m) dados.equipeAId = m.equipeAId ?? null;
+      if ("equipeBId" in m) dados.equipeBId = m.equipeBId ?? null;
+      if (Object.keys(dados).length > 0) await tx.partida.update({ where: { disputaId: m.id }, data: dados });
+
+      if (trocou && COM_RESULTADO.includes(atual.status as string)) {
+        await zerarResultado(tx, m.id);
+        zerou = true;
+      }
+      if (m.status) await tx.disputa.update({ where: { id: m.id }, data: { status: m.status as never } });
+    }
+    // Se algum jogo perdeu o resultado, os jogos que dependiam dele precisam ser recalculados.
+    if (!zerou) break;
   }
 }
 

@@ -65,6 +65,8 @@ export default async function JogosPublicos({
         <div className="flex gap-4 text-sm">
           <Link href="/" className="underline">Início</Link>
           <Link href={`/classificacao/${eventoId}`} className="underline">Classificação e chaves</Link>
+          <Link href={`/podio/${eventoId}`} className="underline">Pódio</Link>
+          <Link href={`/boletins/${eventoId}`} className="underline">Boletins</Link>
           <Link href={`/agenda/${eventoId}`} className="underline">Levar para minha agenda</Link>
         </div>
       </header>

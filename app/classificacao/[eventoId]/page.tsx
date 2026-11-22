@@ -50,6 +50,7 @@ export default async function ClassificacaoDoEvento({ params }: { params: Promis
         <div className="flex gap-4 text-sm">
           <Link href="/" className="underline">Início</Link>
           <Link href={`/jogos/${eventoId}`} className="underline">Jogos e resultados</Link>
+          <Link href={`/podio/${eventoId}`} className="underline">Pódio</Link>
         </div>
       </header>
 
