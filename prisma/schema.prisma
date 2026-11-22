@@ -102,6 +102,8 @@ model Usuario {
   fichaStatus       FichaStatus? @map("ficha_status") // só ATLETA
   fichaArquivo      String?      @map("ficha_arquivo") // só ATLETA
   fichaMotivoRecusa String?      @map("ficha_motivo_recusa") // NOVO: motivo da recusa (tela C6a)
+  fichaEnviadaEm    DateTime?    @map("ficha_enviada_em") @db.Date // só ATLETA: dia em que a ficha começou a contar (RN110)
+  fichaArquivoVisto String?      @map("ficha_arquivo_visto") // só ATLETA: ficha já anotada pela rotina diária
   precisaTrocarSenha Boolean     @default(false) @map("precisa_trocar_senha") // conta criada por outro usuário: troca a senha provisória no 1º acesso
   delegacaoId       Int?         @map("delegacao_id") // só TECNICO e ATLETA
   delegacao         Delegacao?   @relation("DelegacaoMembros", fields: [delegacaoId], references: [id])
