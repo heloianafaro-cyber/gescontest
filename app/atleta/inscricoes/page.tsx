@@ -159,4 +159,4 @@ export default async function MinhasInscricoes() {
       })}
     </main>
   );
-}%
+}

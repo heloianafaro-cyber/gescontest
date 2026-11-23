@@ -174,6 +174,7 @@ export async function inscreverAtleta(p: Pedido): Promise<ResultadoInscricao> {
       data: { atletaId: atleta.id, equipeId, modalidadeId: modalidade.id, pesoKg, faixa },
     });
   }
+  return { erro: "" };
 }
 
 // Cancela a inscrição do atleta em uma equipe/modalidade. Em prova individual, a equipe de 1 some junto.

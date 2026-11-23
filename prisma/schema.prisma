@@ -122,6 +122,9 @@ model Usuario {
   equipesComoTecnico    Equipe[]             @relation("EquipeTecnico")
   equipesComoAtleta     EquipeAtleta[]
   resultados            Resultado[]
+  dadoBancario          DadoBancario?
+  acessosAosDados       AcessoDadoBancario[] @relation("AcessoAtleta")
+  acessosFeitos         AcessoDadoBancario[] @relation("AcessoPor")
   impugnacoes           Impugnacao[]
 
   @@map("usuario")
@@ -236,6 +239,9 @@ model Evento {
 
   // RN150: atleta acima do limite de peso na pesagem sobe de categoria ou é eliminado dela
   pesoExcedente   PesoExcedente @default(SUBIR_CATEGORIA) @map("peso_excedente")
+
+  // RN225: o coordenador decide se o evento pede dados bancários dos atletas (ex.: pagamento de bolsas)
+  pedeDadosBancarios Boolean @default(false) @map("pede_dados_bancarios")
 
   locais       Local[]
   modalidades  Modalidade[]
@@ -687,4 +693,41 @@ model Impugnacao {
 
   @@id([modalidadeId, localId])
   @@map("modalidade_local")
+}
+
+enum TipoConta {
+  CORRENTE
+  POUPANCA
+
+  @@map("tipo_conta")
+}
+
+// RN225-RN232: dados bancários do atleta. Agência, conta e titular ficam CIFRADOS (AES-256-GCM);
+// o banco e o tipo da conta não identificam ninguém sozinhos e ficam em texto.
+model DadoBancario {
+  usuarioId      Int       @id @map("usuario_id")
+  banco          String
+  tipoConta      TipoConta @map("tipo_conta")
+  agenciaCifrada String    @map("agencia_cifrada")
+  contaCifrada   String    @map("conta_cifrada")
+  titularCifrado String    @map("titular_cifrado")
+  informadoEm    DateTime  @map("informado_em") @db.Date // data do envio: base da exclusão automática
+  atualizadoEm   DateTime  @updatedAt @map("atualizado_em")
+  usuario        Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("dado_bancario")
+}
+
+// RN231: registro de quem viu os dados completos de um atleta, e quando (sem guardar os dados).
+model AcessoDadoBancario {
+  id            Int      @id @default(autoincrement())
+  atletaId      Int      @map("atleta_id")
+  acessadoPorId Int      @map("acessado_por_id")
+  eventoId      Int?     @map("evento_id")
+  em            DateTime @default(now())
+  atleta        Usuario  @relation("AcessoAtleta", fields: [atletaId], references: [id], onDelete: Cascade)
+  acessadoPor   Usuario  @relation("AcessoPor", fields: [acessadoPorId], references: [id], onDelete: Cascade)
+
+  @@index([atletaId])
+  @@map("acesso_dado_bancario")
 }

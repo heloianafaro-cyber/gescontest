@@ -16,6 +16,7 @@ type EventoExistente = {
   conferenciaFim?: Date | null;
   recursoFim?: Date | null;
   pesoExcedente?: "SUBIR_CATEGORIA" | "ELIMINAR";
+  pedeDadosBancarios?: boolean;
   idadeLimite: number | null;
   maxModTotal: number | null;
   maxModInd: number | null;
@@ -101,6 +102,21 @@ export function FormEvento({ acao, rotuloBotao, evento }: Props) {
         </select>
         <p className="text-xs text-muted-foreground">Vale para a pesagem. Siga o regulamento da competição.</p>
       </div>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          name="pedeDadosBancarios"
+          defaultChecked={estado.valores ? estado.valores.pedeDadosBancarios === "on" : (evento?.pedeDadosBancarios ?? false)}
+          className="mt-1"
+        />
+        <span>
+          Pedir dados bancários dos atletas (ex.: pagamento de bolsas)
+          <span className="block text-xs text-muted-foreground">
+            Opcional. Os dados ficam cifrados e só o chefe da delegação do atleta e os coordenadores deste evento os veem.
+          </span>
+        </span>
+      </label>
 
       {estado.erro && <p className="text-sm text-red-600">{estado.erro}</p>}
       <Button type="submit" disabled={pendente}>

@@ -28,6 +28,8 @@ export const eventoSchema = z
     recursoFim: dataOpcional,
     // RN150: o que acontece com o atleta acima do limite de peso na pesagem.
     pesoExcedente: z.enum(["SUBIR_CATEGORIA", "ELIMINAR"]).default("SUBIR_CATEGORIA"),
+    // RN225: o evento pede dados bancários dos atletas (ex.: bolsas). Caixa marcada chega como "on".
+    pedeDadosBancarios: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
     idadeLimite: inteiroOpcional,
     maxModTotal: inteiroOpcional,
     maxModInd: inteiroOpcional,
