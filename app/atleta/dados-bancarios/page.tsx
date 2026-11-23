@@ -20,11 +20,18 @@ export default async function DadosBancarios() {
   const sessao = await exigirPerfil("ATLETA");
   const atletaId = Number(sessao.user.id);
 
-  const [dado, vinculos] = await Promise.all([
+  const [dado, vinculos, acessos] = await Promise.all([
     prisma.dadoBancario.findUnique({ where: { usuarioId: atletaId } }),
     prisma.equipeAtleta.findMany({
       where: { atletaId, equipe: { modalidade: { evento: { pedeDadosBancarios: true } } } },
       select: { equipe: { select: { modalidade: { select: { evento: { select: { id: true, nome: true } } } } } } },
+    }),
+    // RN231: o atleta consulta quem viu os dados completos dele.
+    prisma.acessoDadoBancario.findMany({
+      where: { atletaId },
+      orderBy: { em: "desc" },
+      take: 20,
+      select: { em: true, acessadoPor: { select: { nome: true } } },
     }),
   ]);
 
@@ -75,6 +82,24 @@ export default async function DadosBancarios() {
         <section className="space-y-3">
           <h2 className="font-medium">{dado ? "Atualizar dados" : "Informar dados"}</h2>
           <FormDadosBancarios rotuloBotao={dado ? "Atualizar" : "Salvar"} />
+        </section>
+      )}
+
+      {dado && (
+        <section className="space-y-1 text-sm">
+          <h2 className="font-medium">Quem viu seus dados completos</h2>
+          {acessos.length === 0 ? (
+            <p className="text-muted-foreground">Ninguém abriu seus dados completos até agora.</p>
+          ) : (
+            <ul className="list-disc pl-5">
+              {acessos.map((a, i) => (
+                <li key={i}>
+                  {a.acessadoPor.nome} ·{" "}
+                  {a.em.toLocaleString("pt-BR", { timeZone: "America/Bahia", dateStyle: "short", timeStyle: "short" })}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
     </main>

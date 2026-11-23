@@ -4,9 +4,10 @@ import { avisarChefesDoEvento } from "@/modules/eventos/minimos";
 import { deveAvisarMinimosHoje } from "@/modules/eventos/minimos-regras";
 import { avisarBoletinsPendentes } from "@/modules/boletins/avisos";
 import { limparFichas } from "@/modules/fichas/limpeza-db";
+import { limparDadosBancarios } from "@/modules/dados-bancarios/limpeza-db";
 
 // Rotina que roda uma vez por dia (Vercel Cron): aviso de mínimo (RN208), recomendação de boletim (RN222)
-// e limpeza das fichas de autorização vencidas (RN109, RN110, RN224).
+// limpeza das fichas de autorização vencidas (RN109, RN110, RN224) e dos dados bancários vencidos (RN230).
 // Só para testes locais: opcoes.hoje simula outra data e opcoes.simular não apaga nada.
 export async function rodarRotinaDiaria(opcoes: { hoje?: string; simular?: boolean } = {}) {
   const hoje = opcoes.hoje ?? hojeNaBahia();
@@ -22,5 +23,6 @@ export async function rodarRotinaDiaria(opcoes: { hoje?: string; simular?: boole
   }
   const avisosDeBoletim = await avisarBoletinsPendentes();
   const fichas = await limparFichas(hoje, opcoes.simular === true);
-  return { dia: hoje, simulacao: opcoes.simular === true, avisosDeMinimo: avisos, avisosDeBoletim, fichas };
+  const bancarios = await limparDadosBancarios(hoje, opcoes.simular === true);
+  return { dia: hoje, simulacao: opcoes.simular === true, avisosDeMinimo: avisos, avisosDeBoletim, fichas, bancarios };
 }

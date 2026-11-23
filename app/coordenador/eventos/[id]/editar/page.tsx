@@ -25,7 +25,7 @@ export default async function EditarEvento({ params }: { params: Promise<{ id: s
     prisma.eventoExclusaoAprovacao.findMany({ where: { eventoId }, select: { usuarioId: true } }),
   ]);
 
-  const links = [
+  const links: (readonly [string, string])[] = [
     ["coordenadores", "Gerenciar coordenadores"],
     ["locais", "Locais"],
     ["modalidades", "Modalidades"],
@@ -35,7 +35,8 @@ export default async function EditarEvento({ params }: { params: Promise<{ id: s
     ["listas", "Listas de atletas"],
     ["agenda", "Agenda"],
     ["boletins", "Boletins"],
-  ] as const;
+  ];
+  if (evento.pedeDadosBancarios) links.push(["dados-bancarios", "Dados bancários"]);
 
   return (
     <main className="space-y-8 p-8">
