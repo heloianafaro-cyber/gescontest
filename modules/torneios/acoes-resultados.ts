@@ -7,6 +7,7 @@ import { exigirCoordenadorDoEvento } from "@/modules/eventos/acesso";
 import { exigirPerfil } from "@/modules/usuarios/sessao";
 import type { EstadoForm } from "@/modules/eventos/acoes";
 import { aplicarAcao } from "./avanco";
+import { marcarResultadoEm } from "@/modules/recursos/resultado-em";
 
 function textos(formData: FormData) {
   return Object.fromEntries(formData) as Record<string, string>;
@@ -32,6 +33,7 @@ export async function registrarComoCoordenador(
 
   const r = await aplicarAcao(disputaId, "COORDENADOR", formData);
   if (r.erro) return { erro: r.erro, valores: textos(formData) };
+  await marcarResultadoEm(disputaId); // RN234: base do prazo de recurso
 
   const volta = `/coordenador/eventos/${eventoId}/modalidades/${jogo.torneio.modalidadeId}/torneios/${jogo.torneioId}/jogos`;
   revalidatePath(volta);
@@ -52,6 +54,7 @@ export async function registrarComoStaff(
 
   const r = await aplicarAcao(disputaId, "STAFF", formData);
   if (r.erro) return { erro: r.erro, valores: textos(formData) };
+  await marcarResultadoEm(disputaId); // RN234: base do prazo de recurso
 
   revalidatePath(`/staff/jogos/${eventoId}`);
   revalidatePath(`/coordenador/eventos/${eventoId}/modalidades/${jogo.torneio.modalidadeId}/torneios/${jogo.torneioId}/jogos`);

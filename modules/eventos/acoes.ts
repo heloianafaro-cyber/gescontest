@@ -26,6 +26,7 @@ function paraBanco(d: DadosEvento) {
     recursoFim: d.recursoFim ? new Date(d.recursoFim) : null,
     pesoExcedente: d.pesoExcedente,
     pedeDadosBancarios: d.pedeDadosBancarios,
+    recursoPartidaHoras: d.recursoPartidaHoras ?? null,
     idadeLimite: d.idadeLimite ?? null,
     maxModTotal: d.maxModTotal ?? null,
     maxModInd: d.maxModInd ?? null,

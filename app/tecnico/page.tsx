@@ -15,6 +15,7 @@ export default async function Tecnico() {
         { href: "/tecnico/auxiliares", rotulo: "Técnicos e assistentes" },
         { href: "/tecnico/conferencia", rotulo: "Conferência das inscrições" },
         { href: "/tecnico/listas", rotulo: "Listas da delegação" },
+        { href: "/tecnico/recursos", rotulo: "Recursos de jogos" },
         { href: "/tecnico/dados-bancarios", rotulo: "Dados bancários dos atletas" },
         { href: "/agenda", rotulo: "Agenda de jogos (Google Agenda, Outlook)" },
       ]}

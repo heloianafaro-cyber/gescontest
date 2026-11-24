@@ -17,6 +17,7 @@ type EventoExistente = {
   recursoFim?: Date | null;
   pesoExcedente?: "SUBIR_CATEGORIA" | "ELIMINAR";
   pedeDadosBancarios?: boolean;
+  recursoPartidaHoras?: number | null;
   idadeLimite: number | null;
   maxModTotal: number | null;
   maxModInd: number | null;
@@ -38,6 +39,7 @@ const campos = [
   ["conferenciaInicio", "Início da conferência (opcional)", "date", false, "Em branco = evento sem conferência. Só pode começar depois do fim das inscrições."],
   ["conferenciaFim", "Fim da conferência", "date", false, "Obrigatório se houver início. Até este dia, atleta ou chefe de delegação regulariza as pendências."],
   ["recursoFim", "Fim do prazo de recurso (opcional)", "date", false, "Em branco = recursos só durante a conferência. O sorteio só é liberado depois da conferência e dos recursos."],
+  ["recursoPartidaHoras", "Prazo para recursos de jogos, em horas (opcional)", "number", false, "Horas depois do registro do resultado. Em branco = sem prazo."],
   ["idadeLimite", "Idade limite (opcional)", "number", false, "Conta só o ano de nascimento"],
   ["maxModTotal", "Máximo de modalidades por atleta (opcional)", "number", false, "Em branco = sem limite"],
   ["maxModInd", "Máximo de provas individuais (opcional)", "number", false, "Em branco = sem limite"],
@@ -63,6 +65,7 @@ export function FormEvento({ acao, rotuloBotao, evento }: Props) {
         conferenciaInicio: dataParaCampo(evento.conferenciaInicio),
         conferenciaFim: dataParaCampo(evento.conferenciaFim),
         recursoFim: dataParaCampo(evento.recursoFim),
+        recursoPartidaHoras: evento.recursoPartidaHoras?.toString() ?? "",
         idadeLimite: evento.idadeLimite?.toString() ?? "",
         maxModTotal: evento.maxModTotal?.toString() ?? "",
         maxModInd: evento.maxModInd?.toString() ?? "",

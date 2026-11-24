@@ -30,6 +30,8 @@ export const eventoSchema = z
     pesoExcedente: z.enum(["SUBIR_CATEGORIA", "ELIMINAR"]).default("SUBIR_CATEGORIA"),
     // RN225: o evento pede dados bancários dos atletas (ex.: bolsas). Caixa marcada chega como "on".
     pedeDadosBancarios: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
+    // RN234: prazo (em horas depois do resultado) para recurso de jogo; vazio = sem prazo.
+    recursoPartidaHoras: inteiroOpcional,
     idadeLimite: inteiroOpcional,
     maxModTotal: inteiroOpcional,
     maxModInd: inteiroOpcional,

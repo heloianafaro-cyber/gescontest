@@ -125,6 +125,8 @@ model Usuario {
   dadoBancario          DadoBancario?
   acessosAosDados       AcessoDadoBancario[] @relation("AcessoAtleta")
   acessosFeitos         AcessoDadoBancario[] @relation("AcessoPor")
+  recursosAbertos       RecursoDisputa[] @relation("RecursoAberto")
+  recursosDecididos     RecursoDisputa[] @relation("RecursoDecidido")
   impugnacoes           Impugnacao[]
 
   @@map("usuario")
@@ -242,6 +244,9 @@ model Evento {
 
   // RN225: o coordenador decide se o evento pede dados bancários dos atletas (ex.: pagamento de bolsas)
   pedeDadosBancarios Boolean @default(false) @map("pede_dados_bancarios")
+
+  // RN234: prazo (em horas depois do resultado) para abrir recurso de jogo; vazio = sem prazo
+  recursoPartidaHoras Int? @map("recurso_partida_horas")
 
   locais       Local[]
   modalidades  Modalidade[]
@@ -434,11 +439,13 @@ model Disputa {
   serie       Int?         // play-off: número do confronto (série) a que o jogo pertence
   jogoNaSerie Int?         @map("jogo_na_serie") // play-off: jogo 1, 2, 3... da série
   motivoAnulacao String?   @map("motivo_anulacao") // só quando ANULADA
+  resultadoEm DateTime? @map("resultado_em") // quando o resultado foi registrado (base do prazo de recurso)
   status     StatusDisputa @default(AGENDADA)
 
   partida     Partida?
   prova       Prova?
   ocorrencias Ocorrencia[]
+  recursos    RecursoDisputa[]
   travada Boolean @default(false) 
   // RN212: jogo fixado à mão; a agenda automática não mexe nele
 
@@ -555,6 +562,7 @@ model Equipe {
   auxiliares  EquipeAuxiliar[]
   partidasA   Partida[]  @relation("PartidaEquipeA")
   partidasB   Partida[]  @relation("PartidaEquipeB")
+  recursosDeJogo RecursoDisputa[]
   partidasWo  Partida[]  @relation("PartidaWo")
   vitorias    Partida[]  @relation("PartidaVencedor")
   resultados  Resultado[]
@@ -730,4 +738,45 @@ model AcessoDadoBancario {
 
   @@index([atletaId])
   @@map("acesso_dado_bancario")
+}
+
+enum StatusRecurso {
+  ABERTO
+  DEFERIDO
+  INDEFERIDO
+
+  @@map("status_recurso")
+}
+
+enum AssuntoRecurso {
+  ARBITRAGEM
+  ORGANIZACAO
+  OUTRO
+
+  @@map("assunto_recurso")
+}
+
+// RN232-RN236: recurso do chefe de delegação sobre um jogo (partida, combate ou prova).
+// Fotos e vídeos NÃO são guardados: o chefe informa só um link (ex.: pasta do Google Drive).
+model RecursoDisputa {
+  id            Int            @id @default(autoincrement())
+  disputaId     Int            @map("disputa_id")
+  equipeId      Int            @map("equipe_id") // equipe da delegação de quem abriu
+  abertoPorId   Int            @map("aberto_por_id")
+  assunto       AssuntoRecurso
+  texto         String
+  linkProvas    String?        @map("link_provas")
+  status        StatusRecurso  @default(ABERTO)
+  criadoEm      DateTime       @default(now()) @map("criado_em")
+  decisaoTexto  String?        @map("decisao_texto")
+  decididoPorId Int?           @map("decidido_por_id")
+  decididoEm    DateTime?      @map("decidido_em")
+
+  disputa     Disputa  @relation(fields: [disputaId], references: [id], onDelete: Cascade)
+  equipe      Equipe   @relation(fields: [equipeId], references: [id], onDelete: Cascade)
+  abertoPor   Usuario  @relation("RecursoAberto", fields: [abertoPorId], references: [id], onDelete: Cascade)
+  decididoPor Usuario? @relation("RecursoDecidido", fields: [decididoPorId], references: [id], onDelete: SetNull)
+
+  @@unique([disputaId, equipeId])
+  @@map("recurso_disputa")
 }
