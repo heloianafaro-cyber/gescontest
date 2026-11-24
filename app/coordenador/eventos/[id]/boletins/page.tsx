@@ -49,7 +49,7 @@ export default async function Boletins({
     chaveDia(new Date())
   );
 
-  const geral = situacaoDoDia(jogos);
+  const geral = situacaoDoDia(jogos.map((j) => ({ status: j.resultado.status })));
   const final = boletins.find((b) => b.tipo === "FINAL") ?? null;
   const base = `/coordenador/eventos/${eventoId}/boletins`;
 

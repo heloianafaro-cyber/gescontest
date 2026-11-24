@@ -36,7 +36,7 @@ export async function criarTorneio(
   }
 
   const montado = montarDados(modalidade.formatoPlacar, resultado.data, modalidade)
-  if ("erro" in montado) return { erro: montado.erro, valores: textos(formData) };
+  if (montado.erro !== undefined) return { erro: montado.erro, valores: textos(formData) };
 
   const repetido = await prisma.torneio.findFirst({
     where: { modalidadeId, nome: { equals: resultado.data.nome, mode: "insensitive" } },
@@ -71,7 +71,7 @@ export async function editarTorneio(
   }
 
   const montado = montarDados(modalidade.formatoPlacar, resultado.data, modalidade)
-  if ("erro" in montado) return { erro: montado.erro, valores: textos(formData) };
+  if (montado.erro !== undefined) return { erro: montado.erro, valores: textos(formData) };
 
   const repetido = await prisma.torneio.findFirst({
     where: {

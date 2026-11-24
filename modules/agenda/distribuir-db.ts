@@ -249,8 +249,7 @@ export async function gravarDistribuicao(eventoId: number, modo: ModoDistribuica
       ...(limpar.length > 0
         ? [prisma.disputa.updateMany({ where: { id: { in: limpar } }, data: { dataHora: null, localId: null } })]
         : []),
-    ],
-    { timeout: 60_000, maxWait: 20_000 }
+    ]
   );
   return { agendados: r.saida.alocados.length, pendentes: r.saida.pendentes.length };
 }

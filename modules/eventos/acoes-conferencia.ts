@@ -87,7 +87,7 @@ export async function bloquearAtleta(eventoId: number, atletaId: number, formDat
 
   const agora = new Date();
   const dados = {
-    status: "INDEFERIDO",
+    status: "INDEFERIDO" as const,
     bloqueio: true,
     motivo,
     decisaoTexto: motivo,

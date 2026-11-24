@@ -75,7 +75,7 @@ export async function montarConteudo(eventoId: number, eventoNome: string, dia: 
     titulo: nomeDoBoletim(eventoNome, dia),
     dia,
     geradoEm: new Date().toISOString(),
-    resumo: resumoDeJogos(jogos),
+    resumo: resumoDeJogos(jogos.map((j) => ({ status: j.resultado.status }))),
     resultados,
     tabelas,
     podios,
