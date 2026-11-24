@@ -16,13 +16,15 @@ export default async function EditarEvento({ params }: { params: Promise<{ id: s
 
   const { sessao, evento } = await exigirCoordenadorDoEvento(eventoId);
 
-  const [coordenadores, aprovacoes] = await Promise.all([
+  const [coordenadores, aprovacoes, recursosAbertos] = await Promise.all([
     prisma.eventoCoordenador.findMany({
       where: { eventoId },
       include: { usuario: { select: { id: true, nome: true } } },
       orderBy: { usuario: { nome: "asc" } },
     }),
     prisma.eventoExclusaoAprovacao.findMany({ where: { eventoId }, select: { usuarioId: true } }),
+    // RN235: recursos de jogos aguardando decisão
+    prisma.recursoDisputa.count({ where: { status: "ABERTO", disputa: { torneio: { modalidade: { eventoId } } } } }),
   ]);
 
   const links: (readonly [string, string])[] = [
@@ -35,6 +37,7 @@ export default async function EditarEvento({ params }: { params: Promise<{ id: s
     ["listas", "Listas de atletas"],
     ["agenda", "Agenda"],
     ["boletins", "Boletins"],
+    ["recursos", recursosAbertos > 0 ? `Recursos de jogos (${recursosAbertos} em análise)` : "Recursos de jogos"],
   ];
   if (evento.pedeDadosBancarios) links.push(["dados-bancarios", "Dados bancários"]);
 

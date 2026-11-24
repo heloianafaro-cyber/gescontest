@@ -14,6 +14,7 @@ export default async function Staff() {
         { href: "/staff/fichas", rotulo: "Fichas pendentes" },
         { href: "/staff/pesagem", rotulo: "Pesagem" },
         { href: "/staff/jogos", rotulo: "Registro de resultados" },
+        { href: "/staff/recursos", rotulo: "Recursos de jogos" },
         { href: "/staff/listas", rotulo: "Listas de atletas por torneio" },
       ]}
     />
