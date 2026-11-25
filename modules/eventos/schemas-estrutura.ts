@@ -173,6 +173,8 @@ export const torneioSchema = z.object({
   intervaloJogosMin: inteiroOpcional("Intervalo entre os jogos"),
   chaves: inteiroOpcional("Grupos"),
   classificadosPorGrupo: inteiroOpcional("Classificados por grupo"),
+  melhoresPosicao: inteiroOpcional("Posição dos melhores colocados"),
+  melhoresVagas: inteiroOpcional("Vagas dos melhores colocados"),
   pontosVit: inteiroOpcional("Pontos da vitória"),
   pontosEmp: inteiroOpcional("Pontos do empate"),
   pontosDer: inteiroOpcional("Pontos da derrota"),

@@ -17,24 +17,30 @@ export async function salvarDesempate(eventoId: number, modalidadeId: number, to
 
   const volta = `/coordenador/eventos/${eventoId}/modalidades/${modalidadeId}/torneios/${torneioId}/classificacao`;
 
+  // "ordem_<equipe>" = empate dentro do grupo/rodízio; "melhor_<equipe>" = empate no ranking entre os grupos (RN240).
   const ordens = new Map<number, number | null>();
+  const ordensMelhores = new Map<number, number | null>();
   for (const [campo, valor] of formData.entries()) {
-    const m = /^ordem_(\d+)$/.exec(campo);
+    const m = /^(ordem|melhor)_(\d+)$/.exec(campo);
     if (!m) continue;
+    const alvo = m[1] === "melhor" ? ordensMelhores : ordens;
     const texto = String(valor).trim();
     if (texto === "") {
-      ordens.set(Number(m[1]), null);
+      alvo.set(Number(m[2]), null);
       continue;
     }
     const n = Number(texto);
     if (!Number.isInteger(n) || n < 1) redirect(`${volta}?erro=${encodeURIComponent("Use números inteiros a partir de 1.")}`);
-    ordens.set(Number(m[1]), n);
+    alvo.set(Number(m[2]), n);
   }
 
   await prisma.$transaction(
     async (tx) => {
       for (const [equipeId, ordem] of ordens) {
         await tx.torneioEquipe.updateMany({ where: { torneioId, equipeId }, data: { desempateManual: ordem } });
+      }
+      for (const [equipeId, ordem] of ordensMelhores) {
+        await tx.torneioEquipe.updateMany({ where: { torneioId, equipeId }, data: { desempateMelhores: ordem } });
       }
       await sincronizarTorneio(tx, torneioId);
     },

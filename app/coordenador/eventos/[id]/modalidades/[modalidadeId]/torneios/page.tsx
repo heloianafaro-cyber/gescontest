@@ -57,7 +57,10 @@ export default async function Torneios({
             <p className="text-sm">{rotuloSistema[t.sistemaDisputa] ?? t.sistemaDisputa}</p>
             <p className="text-xs text-muted-foreground">
               {t.sistemaDisputa === "RODIZIO" && (t.turnos === 2 ? "Turno e returno" : "Turno simples")}
-              {t.sistemaDisputa === "MISTO" && `${t.chaves} grupos, ${t.classificadosPorGrupo} classificados por grupo`}
+              {t.sistemaDisputa === "MISTO" &&
+                `${t.chaves} grupos, ${t.classificadosPorGrupo} classificados por grupo${
+                  t.melhoresPosicao && t.melhoresVagas ? ` + os ${t.melhoresVagas} melhores ${t.melhoresPosicao}º colocados` : ""
+                }`}
               {t.variante === "REPESCAGEM" && "Com repescagem"}
               {t.terceiroLugar && `${t.sistemaDisputa === "MISTO" ? " · " : ""}${rotuloTerceiro[t.terceiroLugar] ?? ""}`}
               {t.jogosPorSerie ? ` · série de ${t.jogosPorSerie} ${tm.jogos}` : ""}

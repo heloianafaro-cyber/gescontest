@@ -378,6 +378,8 @@ model Torneio {
   turnos              Int     @default(1) // rodízio: 1 = turno simples, 2 = turno e returno
   variante            String? // eliminatório: SIMPLES ou REPESCAGEM
   classificadosPorGrupo Int?  @map("classificados_por_grupo") // misto: quantos de cada grupo avançam
+  melhoresPosicao     Int?   @map("melhores_posicao") // misto, facultativo: posição que disputa vagas entre os grupos (ex.: 3)
+  melhoresVagas       Int?   @map("melhores_vagas")   // misto, facultativo: quantos desse ranking avançam (ex.: 8)
   absoluto            Boolean  @default(false) // só lutas: sem limite de peso; participantes definidos no dia
   terceiroLugar       String?  @map("terceiro_lugar") // DISPUTA_3LUGAR, DOIS_BRONZES ou SEM_DISPUTA (sistemas eliminatórios)
   jogosPorSerie       Int?     @map("jogos_por_serie") // só play-off: série em melhor de 3, 5 ou 7
@@ -406,6 +408,7 @@ model TorneioEquipe {
   cabecaDeChave Boolean @default(false) @map("cabeca_de_chave")
   posicao       Int?    // resultado do sorteio (RN166): posição na chave, ordem no rodízio ou ordem dentro do grupo
   desempateManual Int?  @map("desempate_manual") // RN185: ordem decidida à mão pelo coordenador quando os critérios não resolvem o empate
+  desempateMelhores Int? @map("desempate_melhores") // RN240: ordem à mão para empate no ranking entre grupos
 
   @@id([torneioId, equipeId])
   @@map("torneio_equipe")
@@ -468,6 +471,8 @@ model Partida {
   origemPosA   Int? @map("origem_pos_a")
   origemGrupoB Int? @map("origem_grupo_b")
   origemPosB   Int? @map("origem_pos_b")
+  origemMelhorA Int? @map("origem_melhor_a") // a vaga A espera o "N-ésimo melhor" do ranking entre os grupos
+  origemMelhorB Int? @map("origem_melhor_b")
   placarA     Int?    @default(0) @map("placar_a") // nas lutas, opcional (pontos ou rounds)
   placarB     Int?    @default(0) @map("placar_b")
   vencedorId  Int?    @map("vencedor_id") // usado nas lutas, onde o placar pode não existir

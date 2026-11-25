@@ -59,9 +59,17 @@ export default async function Jogos({
     origemId: number | null | undefined,
     perdedor: boolean | undefined,
     grupo?: number | null,
-    pos?: number | null
+    pos?: number | null,
+    melhor?: number | null
   ) => {
     if (equipe) return equipe.nome;
+    if (melhor) {
+      return (
+        <span className="italic text-muted-foreground">
+          {melhor}º melhor {torneio.melhoresPosicao ?? ""}º colocado
+        </span>
+      );
+    }
     if (grupo && pos) {
       return (
         <span className="italic text-muted-foreground">
@@ -181,9 +189,9 @@ export default async function Jogos({
                       Confronto {d.serie} · {tm.jogo} {d.jogoNaSerie}
                     </span>
                   ) : null}
-                  {vaga(d.partida?.equipeA, d.partida?.origemAId, d.partida?.origemPerdedor, d.partida?.origemGrupoA, d.partida?.origemPosA)}{" "}
+                  {vaga(d.partida?.equipeA, d.partida?.origemAId, d.partida?.origemPerdedor, d.partida?.origemGrupoA, d.partida?.origemPosA, d.partida?.origemMelhorA)}{" "}
                   <span className="text-muted-foreground">x</span>{" "}
-                  {vaga(d.partida?.equipeB, d.partida?.origemBId, d.partida?.origemPerdedor, d.partida?.origemGrupoB, d.partida?.origemPosB)}
+                  {vaga(d.partida?.equipeB, d.partida?.origemBId, d.partida?.origemPerdedor, d.partida?.origemGrupoB, d.partida?.origemPosB, d.partida?.origemMelhorB)}
                   {resumoResultado(torneio.modalidade.formatoPlacar, d.status, d.partida, d.partida?.equipeA?.nome, d.partida?.equipeB?.nome) && (
                     <span className="ml-2 font-medium">
                       {resumoResultado(torneio.modalidade.formatoPlacar, d.status, d.partida, d.partida?.equipeA?.nome, d.partida?.equipeB?.nome)}

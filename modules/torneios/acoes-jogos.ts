@@ -70,7 +70,18 @@ export async function gerarJogos(eventoId: number, modalidadeId: number, torneio
       if (k < 1 || grupos.some((g) => g.length < k)) {
         erro("Os classificados por grupo precisam ser pelo menos 1 e não maiores que o menor grupo.");
       }
-      plano = jogosDoMisto(grupos, k, torneio.terceiroLugar);
+      // RN237: melhores de uma posição entre os grupos (facultativo). A posição vem depois dos classificados diretos.
+      const posMelhores = torneio.melhoresPosicao ?? 0;
+      const vagasMelhores = torneio.melhoresVagas ?? 0;
+      if (posMelhores > 0 || vagasMelhores > 0) {
+        const menor = Math.min(...grupos.map((g) => g.length));
+        if (posMelhores <= k) erro(`A posição dos melhores (${posMelhores}º) precisa vir depois dos ${k} classificados diretos de cada grupo.`);
+        if (posMelhores > menor) erro(`O menor grupo tem ${menor} equipes: não há ${posMelhores}º colocado em todos os grupos.`);
+        if (vagasMelhores < 1 || vagasMelhores >= grupos.length) {
+          erro(`As vagas dos melhores ${posMelhores}º devem ser de 1 até ${grupos.length - 1} (menos que o número de grupos).`);
+        }
+      }
+      plano = jogosDoMisto(grupos, k, torneio.terceiroLugar, torneio.melhoresPosicao && torneio.melhoresVagas ? vagasMelhores : 0);
     } else {
       // Eliminatória simples: a chave inteira, com as vagas dos jogos seguintes ainda vazias (RN135).
       const tamanho = potenciaDe2(torneio.participantes.length);
@@ -87,10 +98,12 @@ export async function gerarJogos(eventoId: number, modalidadeId: number, torneio
         const ids: number[] = [];
         const lado = (l: Lado) =>
           "equipeId" in l
-            ? { equipeId: l.equipeId, origem: null, grupo: null, pos: null }
+            ? { equipeId: l.equipeId, origem: null, grupo: null, pos: null, melhor: null }
             : "jogo" in l
-              ? { equipeId: null, origem: ids[l.jogo], grupo: null, pos: null }
-              : { equipeId: null, origem: null, grupo: l.grupo, pos: l.pos };
+              ? { equipeId: null, origem: ids[l.jogo], grupo: null, pos: null, melhor: null }
+              : "melhor" in l
+                ? { equipeId: null, origem: null, grupo: null, pos: null, melhor: l.melhor }
+                : { equipeId: null, origem: null, grupo: l.grupo, pos: l.pos, melhor: null };
         for (let i = 0; i < plano.length; i++) {
           const j = plano[i];
           const a = lado(j.a);
@@ -114,6 +127,8 @@ export async function gerarJogos(eventoId: number, modalidadeId: number, torneio
                   origemPosA: a.pos,
                   origemGrupoB: b.grupo,
                   origemPosB: b.pos,
+                  origemMelhorA: a.melhor,
+                  origemMelhorB: b.melhor,
                   origemPerdedor: !!j.perdedores,
                 },
               },

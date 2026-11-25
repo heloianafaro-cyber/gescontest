@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { JogoLinha } from "@/components/jogo-publico";
 import { jogosDoTorneio } from "@/modules/publico/consultas";
 import { agruparPorFase } from "@/modules/publico/chave";
-import { tabelasDoTorneio } from "@/modules/torneios/classificacao-db";
+import { tabelasDoTorneio, rankingDosMelhores } from "@/modules/torneios/classificacao-db";
+import { RankingMelhoresTabela } from "@/components/ranking-melhores";
 import { podioDoTorneio } from "@/modules/publico/podio-db";
 import { PodioTorneio } from "@/components/podio-torneio";
 
@@ -30,6 +31,7 @@ export default async function TorneioPublico({ params }: { params: Promise<{ eve
 
   const modalidade = t.modalidade.nome;
   const podio = await podioDoTorneio(torneioId);
+  const ranking = rankingDosMelhores(dados);
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-6 sm:p-8">
@@ -95,6 +97,10 @@ export default async function TorneioPublico({ params }: { params: Promise<{ eve
           )}
         </section>
       ))}
+
+      {ranking && t.melhoresPosicao && t.melhoresVagas && (
+        <RankingMelhoresTabela ranking={ranking} nomes={dados.nomes} posicao={t.melhoresPosicao} vagas={t.melhoresVagas} />
+      )}
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">

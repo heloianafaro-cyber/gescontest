@@ -32,6 +32,20 @@ export function montarDados(formato: string | null, d: DadosTorneio, cfg: Config
     if (d.classificadosPorGrupo === undefined || d.classificadosPorGrupo < 1) {
       return { erro: "Informe quantos classificados avançam de cada grupo." };
     }
+    // RN237: melhores de uma posição entre os grupos (facultativo; os dois campos juntos ou nenhum).
+    const pos = d.melhoresPosicao;
+    const vagas = d.melhoresVagas;
+    if ((pos === undefined) !== (vagas === undefined)) {
+      return { erro: "Para classificar os melhores colocados entre os grupos, informe a posição e a quantidade de vagas." };
+    }
+    if (pos !== undefined && vagas !== undefined) {
+      if (pos <= d.classificadosPorGrupo) {
+        return { erro: `A posição dos melhores colocados precisa vir depois dos ${d.classificadosPorGrupo} classificados diretos.` };
+      }
+      if (vagas < 1 || vagas >= d.chaves) {
+        return { erro: `As vagas dos melhores ${pos}º devem ser de 1 até ${d.chaves - 1} (menos que o número de grupos).` };
+      }
+    }
   }
 
   // Eliminatório
@@ -128,6 +142,8 @@ export function montarDados(formato: string | null, d: DadosTorneio, cfg: Config
       jogosPorSerieFinal,
       chaves: misto ? (d.chaves ?? null) : null,
       classificadosPorGrupo: misto ? (d.classificadosPorGrupo ?? null) : null,
+      melhoresPosicao: misto ? (d.melhoresPosicao ?? null) : null,
+      melhoresVagas: misto ? (d.melhoresVagas ?? null) : null,
       pontosVit: pontua ? (d.pontosVit ?? 3) : 3,
       pontosEmp: pontua ? (d.pontosEmp ?? 1) : 1,
       pontosDer: pontua ? (d.pontosDer ?? 0) : 0,

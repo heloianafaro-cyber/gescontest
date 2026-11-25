@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { exigirCoordenadorDoEvento } from "@/modules/eventos/acesso";
-import { tabelasDoTorneio } from "@/modules/torneios/classificacao-db";
+import { tabelasDoTorneio, rankingDosMelhores } from "@/modules/torneios/classificacao-db";
+import { RankingMelhoresTabela } from "@/components/ranking-melhores";
 import { salvarDesempate } from "@/modules/torneios/acoes-classificacao";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,9 @@ export default async function Classificacao({
   const k = t.classificadosPorGrupo ?? 0;
   const empatadas = dados.tabelas.flatMap((tab) => tab.linhas.filter((l) => l.empatada));
   const acao = salvarDesempate.bind(null, eventoId, idModalidade, idTorneio);
+  const ranking = rankingDosMelhores(dados);
+  const manualMelhores = new Map(t.participantes.map((p) => [p.equipeId, p.desempateMelhores]));
+  const empatadasRanking = ranking ? ranking.linhas.slice(0, t.melhoresVagas ?? 0).filter((l) => l.empatada) : [];
 
   return (
     <main className="space-y-6 p-8">
@@ -94,6 +98,35 @@ export default async function Classificacao({
           )}
         </section>
       ))}
+
+      {ranking && t.melhoresPosicao && t.melhoresVagas && (
+        <RankingMelhoresTabela ranking={ranking} nomes={dados.nomes} posicao={t.melhoresPosicao} vagas={t.melhoresVagas} />
+      )}
+
+      {empatadasRanking.length > 0 && ranking?.pendencia?.includes("no ranking") && (
+        <section className="max-w-xl space-y-3 rounded-lg border border-amber-300 p-4">
+          <p className="text-sm font-medium">⚠ Empate no ranking dos melhores {t.melhoresPosicao}º colocados</p>
+          <p className="text-sm text-muted-foreground">
+            Os critérios não resolveram. Defina a ordem das equipes abaixo (1 = fica na frente). Os classificados só
+            entram no mata-mata quando o ranking estiver decidido.
+          </p>
+          <form action={acao} className="space-y-2">
+            {empatadasRanking.map((l) => (
+              <div key={l.equipeId} className="flex items-center gap-3 text-sm">
+                <input
+                  name={`melhor_${l.equipeId}`}
+                  type="number"
+                  min={1}
+                  defaultValue={manualMelhores.get(l.equipeId) ?? ""}
+                  className="h-9 w-20 rounded-md border border-input bg-transparent px-2"
+                />
+                <span>{nome(l.equipeId)}</span>
+              </div>
+            ))}
+            <Button type="submit">Salvar ordem</Button>
+          </form>
+        </section>
+      )}
 
       {empatadas.length > 0 && (
         <section className="max-w-xl space-y-3 rounded-lg border border-amber-300 p-4">

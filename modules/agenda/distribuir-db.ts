@@ -89,6 +89,8 @@ export async function calcularDistribuicao(eventoId: number, modo: ModoDistribui
           origemBId: true,
           origemGrupoA: true,
           origemGrupoB: true,
+          origemMelhorA: true,
+          origemMelhorB: true,
           equipeA: { select: { nome: true } },
           equipeB: { select: { nome: true } },
         },
@@ -151,7 +153,12 @@ export async function calcularDistribuicao(eventoId: number, modo: ModoDistribui
     if (d.partida?.origemAId) deps.add(d.partida.origemAId);
     if (d.partida?.origemBId) deps.add(d.partida.origemBId);
     const irmaos = porTorneio.get(d.torneioId) ?? [];
-    if (d.partida?.origemGrupoA != null || d.partida?.origemGrupoB != null) {
+    if (
+      d.partida?.origemGrupoA != null ||
+      d.partida?.origemGrupoB != null ||
+      d.partida?.origemMelhorA != null ||
+      d.partida?.origemMelhorB != null
+    ) {
       for (const x of irmaos) if (x.fase?.startsWith("Grupo") && x.id !== d.id) deps.add(x.id);
     }
     if (d.serie != null && d.jogoNaSerie != null && d.jogoNaSerie > 1) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { JogoLinha } from "@/components/jogo-publico";
@@ -5,6 +6,12 @@ import { eventoAtualId, jogosDoEvento } from "@/modules/publico/consultas";
 import { chaveDia } from "@/modules/publico/formato";
 
 export const instant = false;
+
+export const metadata: Metadata = {
+  title: "GesContest · Eventos esportivos escolares",
+  description:
+    "Gestão de eventos esportivos escolares: jogos, resultados, classificação, pódio e boletins, com consulta pública e gratuita.",
+};
 
 const datas = (d: Date) => d.toLocaleDateString("pt-BR", { timeZone: "UTC" });
 
@@ -32,8 +39,25 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-8 p-6 sm:p-8">
-      <header className="space-y-1">
+      <div className="flex items-center justify-between gap-4">
         <p className="text-sm font-medium text-muted-foreground">GesContest</p>
+        <nav className="flex items-center gap-2 text-sm" aria-label="Acesso ao sistema">
+          <Link
+            href="/login"
+            className="inline-flex h-9 items-center rounded-md border border-input px-4 font-medium hover:bg-muted"
+          >
+            Entrar
+          </Link>
+          <Link
+            href="/cadastro"
+            className="inline-flex h-9 items-center rounded-md bg-primary px-4 font-medium text-primary-foreground hover:opacity-90"
+          >
+            Cadastrar-se
+          </Link>
+        </nav>
+      </div>
+
+      <header className="space-y-1">
         <h1 className="text-2xl font-semibold">{atual ? atual.nome : "Eventos esportivos escolares"}</h1>
         {atual && (
           <p className="text-sm text-muted-foreground">

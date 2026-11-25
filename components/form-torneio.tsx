@@ -160,6 +160,22 @@ export function FormTorneio({ acao, rotuloBotao, formato, config = configPadrao,
         </div>
       )}
 
+      {misto && (
+        <div className="space-y-2 rounded-lg border p-3">
+          <p className="text-sm font-medium">Melhores colocados entre os grupos (facultativo)</p>
+          <p className="text-xs text-muted-foreground">
+            Deixe em branco se só os classificados diretos avançam. Para classificar também os melhores de uma posição
+            (ex.: os 8 melhores 3º colocados, como na Copa de 2026), informe a posição e quantas vagas. O ranking usa os
+            mesmos critérios de desempate da modalidade; em grupos de tamanhos diferentes, os jogos contra o último
+            colocado dos grupos maiores não contam.
+          </p>
+          <div className="flex gap-3">
+            <Numero campo="melhoresPosicao" rotulo="Posição (ex.: 3)" valor={valor("melhoresPosicao", "")} />
+            <Numero campo="melhoresVagas" rotulo="Vagas (ex.: 8)" valor={valor("melhoresVagas", "")} />
+          </div>
+        </div>
+      )}
+
       {mostraTerceiro && (
         <div className="space-y-1">
           <Label htmlFor="terceiroLugar">Terceiro lugar</Label>

@@ -39,8 +39,9 @@ export function rodizio(ids: number[], turnos: number): { confrontos: Confronto[
 import { potenciaDe2, ordemDaChave } from "./sorteio";
 
 // Cada vaga de um jogo é: uma equipe já conhecida, o resultado de outro jogo do plano,
-// ou o classificado numa posição de um grupo (mata-mata depois dos grupos).
-export type Lado = { equipeId: number } | { jogo: number } | { grupo: number; pos: number };
+// o classificado numa posição de um grupo (mata-mata depois dos grupos) ou o "melhor Nº colocado" entre os grupos
+// (RN237: ex.: o 3º melhor terceiro colocado, numerado pelo ranking).
+export type Lado = { equipeId: number } | { jogo: number } | { grupo: number; pos: number } | { melhor: number };
 export type JogoPlano = {
   fase: string;
   rodada: number;
@@ -102,7 +103,13 @@ const letra = (g: number) => String.fromCharCode(64 + g);
 
 // Sistema misto: cada grupo joga em rodízio (turno simples) e os melhores de cada grupo seguem para o mata-mata.
 // grupos[i] = equipes do grupo i+1, na ordem do sorteio. k = classificados por grupo.
-export function jogosDoMisto(grupos: number[][], k: number, terceiroLugar: string | null): JogoPlano[] {
+// vagasMelhores = quantos "melhores de uma posição" (ex.: melhores terceiros) também avançam (0 = não usa).
+export function jogosDoMisto(
+  grupos: number[][],
+  k: number,
+  terceiroLugar: string | null,
+  vagasMelhores = 0
+): JogoPlano[] {
   const jogos: JogoPlano[] = [];
   let ultimaRodada = 0;
 
@@ -121,7 +128,7 @@ export function jogosDoMisto(grupos: number[][], k: number, terceiroLugar: strin
 
   const g = grupos.length;
   let entradas: (Lado | null)[];
-  if (k === 2 && g >= 2 && potenciaDe2(g) === g) {
+  if (vagasMelhores === 0 && k === 2 && g >= 2 && potenciaDe2(g) === g) {
     // Cruzamento clássico: o 1º de um grupo enfrenta o 2º do grupo vizinho, em lados opostos da chave.
     const primeiros: Lado[] = [];
     const segundos: Lado[] = [];
@@ -140,6 +147,8 @@ export function jogosDoMisto(grupos: number[][], k: number, terceiroLugar: strin
       if (pos % 2 === 0) ordem.reverse();
       for (const gr of ordem) seeds.push({ grupo: gr, pos });
     }
+    // Os melhores de uma posição (ex.: melhores terceiros) entram por último: o melhor enfrenta o 1º cabeça.
+    for (let m = 1; m <= vagasMelhores; m++) seeds.push({ melhor: m });
     const tamanho = potenciaDe2(seeds.length);
     const ordem = ordemDaChave(tamanho);
     entradas = ordem.map((seed) => (seed <= seeds.length ? seeds[seed - 1] : null));
