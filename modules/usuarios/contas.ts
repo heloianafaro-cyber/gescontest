@@ -129,8 +129,10 @@ export async function alternarAtivo(formData: FormData) {
   const usuarioId = z.coerce.number().int().positive().parse(formData.get("usuarioId"));
   const ativar = formData.get("ativar") === "1";
   const voltaInformada = String(formData.get("volta") ?? "");
-  const volta = voltaInformada.startsWith("/adm/contas") ? voltaInformada.split("?")[0] : "/adm/contas";
-  const sair = (campo: "ok" | "erro", texto: string) => redirect(`${volta}?${campo}=${encodeURIComponent(texto)}`);
+  // Volta para a lista de onde veio (ativas ou desativadas); só esses dois destinos são aceitos.
+  const volta = voltaInformada.includes("situacao=desativadas") ? "/adm/contas?situacao=desativadas" : "/adm/contas";
+  const sair = (campo: "ok" | "erro", texto: string) =>
+    redirect(`${volta}${volta.includes("?") ? "&" : "?"}${campo}=${encodeURIComponent(texto)}`);
 
   const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
   if (!alvo) return sair("erro", "Conta não encontrada.");
