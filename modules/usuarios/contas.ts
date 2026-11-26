@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { hashPassword } from "better-auth/crypto";
 import { prisma } from "@/lib/prisma";
 import { gerarSenhaProvisoria } from "@/lib/senha";
@@ -14,7 +15,7 @@ export type EstadoConta = {
   criada?: { nome: string; email: string; senha: string };
 };
 
-type TipoCriavel = "STAFF" | "TECNICO" | "PROF";
+type TipoCriavel = "STAFF" | "TECNICO" | "PROF" | "ADM";
 
 async function criarConta(tipo: TipoCriavel, formData: FormData): Promise<EstadoConta> {
   const valores = Object.fromEntries(formData) as Record<string, string>;
@@ -82,7 +83,15 @@ export async function criarProf(_anterior: EstadoConta, formData: FormData): Pro
   return resultado;
 }
 
-// RN143: nova senha provisória (Prof para Staff e Técnico; Adm para Prof).
+// RN244: o Administrador cria outros Administradores (o primeiro é promovido no banco, uma única vez).
+export async function criarAdm(_anterior: EstadoConta, formData: FormData): Promise<EstadoConta> {
+  await exigirPerfil("ADM");
+  const resultado = await criarConta("ADM", formData);
+  if (!resultado.erro) revalidatePath("/adm/contas");
+  return resultado;
+}
+
+// RN143: nova senha provisória (Prof para Staff e Técnico; Adm para qualquer conta que não seja a sua).
 export async function redefinirSenha(_anterior: EstadoConta, formData: FormData): Promise<EstadoConta> {
   const sessao = await exigirPerfil("PROF", "ADM");
   const usuarioId = z.coerce.number().int().positive().parse(formData.get("usuarioId"));
@@ -93,7 +102,7 @@ export async function redefinirSenha(_anterior: EstadoConta, formData: FormData)
   const meuTipo = sessao.user.tipo as string;
   const permitido =
     (meuTipo === "PROF" && (alvo.tipo === "STAFF" || alvo.tipo === "TECNICO")) ||
-    (meuTipo === "ADM" && alvo.tipo === "PROF");
+    (meuTipo === "ADM" && alvo.id !== Number(sessao.user.id));
   if (!permitido) return { erro: "Você não pode redefinir a senha desta conta." };
 
   const senha = gerarSenhaProvisoria();
@@ -111,4 +120,35 @@ export async function redefinirSenha(_anterior: EstadoConta, formData: FormData)
   revalidatePath("/coordenador/contas");
   revalidatePath("/adm/contas");
   return { erro: "", criada: { nome: alvo.nome, email: alvo.email, senha } };
+}
+
+// RN242-RN243: o Administrador desativa e reativa contas. Desativar derruba os logins abertos e recusa novos;
+// o histórico (inscrições, resultados, recursos) permanece. Ninguém desativa a própria conta e sempre resta um ADM ativo.
+export async function alternarAtivo(formData: FormData) {
+  const sessao = await exigirPerfil("ADM");
+  const usuarioId = z.coerce.number().int().positive().parse(formData.get("usuarioId"));
+  const ativar = formData.get("ativar") === "1";
+  const voltaInformada = String(formData.get("volta") ?? "");
+  const volta = voltaInformada.startsWith("/adm/contas") ? voltaInformada.split("?")[0] : "/adm/contas";
+  const sair = (campo: "ok" | "erro", texto: string) => redirect(`${volta}?${campo}=${encodeURIComponent(texto)}`);
+
+  const alvo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+  if (!alvo) return sair("erro", "Conta não encontrada.");
+  if (alvo.id === Number(sessao.user.id)) return sair("erro", "Você não pode desativar a sua própria conta.");
+
+  if (!ativar && alvo.tipo === "ADM") {
+    const outros = await prisma.usuario.count({ where: { tipo: "ADM", ativo: true, id: { not: alvo.id } } });
+    if (outros === 0) return sair("erro", "É preciso manter pelo menos um administrador ativo.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.usuario.update({
+      where: { id: alvo.id },
+      data: ativar ? { ativo: true, desativadoEm: null } : { ativo: false, desativadoEm: new Date() },
+    });
+    if (!ativar) await tx.sessao.deleteMany({ where: { userId: alvo.id } });
+  });
+
+  revalidatePath("/adm/contas");
+  return sair("ok", ativar ? `Conta de ${alvo.nome} reativada.` : `Conta de ${alvo.nome} desativada.`);
 }

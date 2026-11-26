@@ -9,7 +9,7 @@ export default async function Adm() {
     <PaginaProvisoria
       titulo="Área do administrador"
       nome={sessao.user.name}
-      links={[{ href: "/adm/contas", rotulo: "Contas de coordenadores" }]}
+      links={[{ href: "/adm/contas", rotulo: "Contas de usuários" }]}
     />
   );
 }

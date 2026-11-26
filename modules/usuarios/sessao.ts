@@ -16,11 +16,14 @@ export async function exigirPerfil(...perfis: string[]) {
   const sessao = await auth.api.getSession({ headers: await headers() });
   if (!sessao) redirect("/login");
 
-  // RN142: conta com senha provisória só usa o sistema depois de trocá-la.
   const conta = await prisma.usuario.findUnique({
     where: { id: Number(sessao.user.id) },
-    select: { precisaTrocarSenha: true },
+    select: { precisaTrocarSenha: true, ativo: true },
   });
+  // RN242: conta desativada perde o acesso na hora (reforço: as sessões também são apagadas).
+  if (conta && !conta.ativo) redirect("/login");
+
+  // RN142: conta com senha provisória só usa o sistema depois de trocá-la.
   if (conta?.precisaTrocarSenha) redirect("/trocar-senha");
 
   const tipo = sessao.user.tipo as string;
