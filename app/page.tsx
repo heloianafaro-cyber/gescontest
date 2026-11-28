@@ -74,6 +74,7 @@ export default async function Home() {
             <Link href={`/jogos/${atual.id}`} className="underline">Todos os jogos</Link>
             <Link href={`/classificacao/${atual.id}`} className="underline">Classificação e chaves</Link>
             <Link href={`/podio/${atual.id}`} className="underline">Pódio</Link>
+            <Link href={`/medalhas/${atual.id}`} className="underline">Quadro de medalhas</Link>
             <Link href={`/boletins/${atual.id}`} className="underline">Boletins</Link>
             <Link href={`/agenda/${atual.id}`} className="underline">Levar para minha agenda</Link>
             <Link href="/regulamentos" className="underline">Regulamentos</Link>

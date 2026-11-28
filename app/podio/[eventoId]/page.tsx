@@ -54,6 +54,7 @@ export default async function PodiosDoEvento({ params }: { params: Promise<{ eve
         <div className="flex gap-4 text-sm">
           <Link href="/" className="underline">Início</Link>
           <Link href={`/classificacao/${eventoId}`} className="underline">Classificação e chaves</Link>
+          <Link href={`/medalhas/${eventoId}`} className="underline">Quadro de medalhas</Link>
         </div>
         {total > 0 && (
           <p className="text-sm text-muted-foreground">

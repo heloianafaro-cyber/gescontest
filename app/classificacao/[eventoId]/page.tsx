@@ -51,6 +51,7 @@ export default async function ClassificacaoDoEvento({ params }: { params: Promis
           <Link href="/" className="underline">Início</Link>
           <Link href={`/jogos/${eventoId}`} className="underline">Jogos e resultados</Link>
           <Link href={`/podio/${eventoId}`} className="underline">Pódio</Link>
+            <Link href={`/medalhas/${eventoId}`} className="underline">Quadro de medalhas</Link>
         </div>
       </header>
 
