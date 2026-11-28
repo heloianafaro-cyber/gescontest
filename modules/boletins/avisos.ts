@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { notificar } from "@/modules/eventos/notificar";
 import { jogosDoEvento } from "@/modules/publico/consultas";
 import { chaveDia } from "@/modules/publico/formato";
 import { diaCurto, diasRecomendados, situacaoDoDia } from "./conteudo";
@@ -32,7 +33,7 @@ export async function avisarBoletinsPendentes(): Promise<number> {
       const jaSet = new Set(ja.map((n) => n.usuarioId));
       const novos = ids.filter((id) => !jaSet.has(id));
       if (novos.length > 0) {
-        await prisma.notificacao.createMany({ data: novos.map((usuarioId) => ({ usuarioId, mensagem })) });
+        await notificar(novos, mensagem);
         total += novos.length;
       }
     }

@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { notificar } from "@/modules/eventos/notificar";
 import { exigirPerfil } from "@/modules/usuarios/sessao";
 import type { EstadoForm } from "@/modules/eventos/acoes";
 import { inscreverAtleta, cancelarInscricaoAtleta } from "./regras-inscricao";
@@ -19,12 +20,10 @@ async function avisarChefes(atletaId: number, motivo: string): Promise<number> {
     select: { id: true },
   });
   if (chefes.length === 0) return 0;
-  await prisma.notificacao.createMany({
-    data: chefes.map((c) => ({
-      usuarioId: c.id,
-      mensagem: `O atleta ${atleta.nome} tentou se inscrever e foi bloqueado. ${motivo}`,
-    })),
-  });
+  await notificar(
+    chefes.map((c) => c.id),
+    `O atleta ${atleta.nome} tentou se inscrever e foi bloqueado. ${motivo}`
+  );
   return chefes.length;
 }
 

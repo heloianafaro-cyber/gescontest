@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { notificar } from "./notificar";
 import { avisoMinimo } from "./listas-csv";
 
 export type EquipeAbaixo = {
@@ -55,7 +56,7 @@ async function avisarChefesDaDelegacao(delegacaoId: number, mensagem: string, se
   }
   if (ids.length === 0) return 0;
 
-  await prisma.notificacao.createMany({ data: ids.map((usuarioId) => ({ usuarioId, mensagem })) });
+  await notificar(ids, mensagem);
   return ids.length;
 }
 

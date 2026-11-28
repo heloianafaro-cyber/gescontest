@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { notificar } from "@/modules/eventos/notificar";
 import { exigirPerfil } from "@/modules/usuarios/sessao";
 import type { EstadoForm } from "@/modules/eventos/acoes";
 import { atribuirCategoria } from "@/modules/equipes/categoria";
@@ -14,7 +15,7 @@ async function avisar(atletaId: number, delegacaoId: number, mensagem: string) {
     select: { id: true },
   });
   const destinos = [atletaId, ...chefes.map((c) => c.id)];
-  await prisma.notificacao.createMany({ data: destinos.map((usuarioId) => ({ usuarioId, mensagem })) });
+  await notificar(destinos, mensagem);
 }
 
 // RN149, RN150, RN159, RN162: pesagem de um atleta de prova individual de luta.

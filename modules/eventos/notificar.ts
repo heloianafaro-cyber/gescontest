@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { enviarAvisosPorEmail } from "@/modules/email/avisos";
 
 // O atleta e os chefes da delegação dele.
 export async function destinatariosDoAtleta(atletaId: number): Promise<number[]> {
@@ -22,8 +23,21 @@ export async function coordenadoresDoEvento(eventoId: number): Promise<number[]>
   return linhas.map((l) => l.usuarioId);
 }
 
-export async function notificar(ids: number[], mensagem: string) {
+// Grava a notificação no sistema e, se for um aviso importante (RN248), também manda e-mail curto.
+// Falha no e-mail nunca impede a ação: a notificação no sistema já está gravada.
+export async function notificar(ids: number[], mensagem: string, opcoes?: { email?: boolean }) {
   const unicos = [...new Set(ids)];
   if (unicos.length === 0) return;
-  await prisma.notificacao.createMany({ data: unicos.map((usuarioId) => ({ usuarioId, mensagem })) });
+  const criadas = await prisma.notificacao.createManyAndReturn({
+    data: unicos.map((usuarioId) => ({ usuarioId, mensagem })),
+    select: { id: true, usuarioId: true },
+  });
+  try {
+    await enviarAvisosPorEmail(
+      criadas.map((c) => ({ notificacaoId: c.id, usuarioId: c.usuarioId, mensagem })),
+      opcoes?.email
+    );
+  } catch (e) {
+    console.error("[email] falha ao enviar avisos:", e);
+  }
 }
